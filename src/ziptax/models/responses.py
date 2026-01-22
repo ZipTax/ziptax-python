@@ -1,8 +1,9 @@
 """Response models for the ZipTax API."""
 
-from typing import List, Optional, Literal
 from enum import Enum
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class JurisdictionType(str, Enum):
@@ -60,11 +61,17 @@ class V60BaseRate(BaseModel):
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     rate: float = Field(..., description="Tax rate")
-    rate_id: Optional[str] = Field(None, alias="rateId", description="Rate identifier from tax table")
+    rate_id: Optional[str] = Field(
+        None, alias="rateId", description="Rate identifier from tax table"
+    )
     jur_type: str = Field(..., alias="jurType", description="Jurisdiction type")
     jur_name: str = Field(..., alias="jurName", description="Jurisdiction name")
-    jur_description: Optional[str] = Field(None, alias="jurDescription", description="Jurisdiction description")
-    jur_tax_code: Optional[str] = Field(None, alias="jurTaxCode", description="Tax code for jurisdiction")
+    jur_description: Optional[str] = Field(
+        None, alias="jurDescription", description="Jurisdiction description"
+    )
+    jur_tax_code: Optional[str] = Field(
+        None, alias="jurTaxCode", description="Tax code for jurisdiction"
+    )
 
 
 class V60Service(BaseModel):
@@ -72,7 +79,9 @@ class V60Service(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    adjustment_type: str = Field(..., alias="adjustmentType", description="Service adjustment type")
+    adjustment_type: str = Field(
+        ..., alias="adjustmentType", description="Service adjustment type"
+    )
     taxable: Literal["Y", "N"] = Field(..., description="Taxability indicator")
     description: str = Field(..., description="Service description")
 
@@ -82,7 +91,9 @@ class V60Shipping(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    adjustment_type: str = Field(..., alias="adjustmentType", description="Shipping adjustment type")
+    adjustment_type: str = Field(
+        ..., alias="adjustmentType", description="Shipping adjustment type"
+    )
     taxable: Literal["Y", "N"] = Field(..., description="Taxability indicator")
     description: str = Field(..., description="Shipping description")
 
@@ -92,9 +103,13 @@ class V60SourcingRules(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    adjustment_type: str = Field(..., alias="adjustmentType", description="Sourcing rule type")
+    adjustment_type: str = Field(
+        ..., alias="adjustmentType", description="Sourcing rule type"
+    )
     description: str = Field(..., description="Sourcing rule description")
-    value: Literal["O", "D"] = Field(..., description="Origin (O) or Destination (D) based")
+    value: Literal["O", "D"] = Field(
+        ..., description="Origin (O) or Destination (D) based"
+    )
 
 
 class V60DisplayRate(BaseModel):
@@ -113,8 +128,12 @@ class V60TaxSummary(BaseModel):
 
     rate: float = Field(..., description="Summary tax rate")
     tax_type: str = Field(..., alias="taxType", description="Tax type")
-    summary_name: str = Field(..., alias="summaryName", description="Summary description")
-    display_rates: List["V60DisplayRate"] = Field(..., alias="displayRates", description="Display rates breakdown")
+    summary_name: str = Field(
+        ..., alias="summaryName", description="Summary description"
+    )
+    display_rates: List["V60DisplayRate"] = Field(
+        ..., alias="displayRates", description="Display rates breakdown"
+    )
 
 
 class V60AddressDetail(BaseModel):
@@ -123,7 +142,9 @@ class V60AddressDetail(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     normalizedAddress: str = Field(..., description="Normalized address")
-    incorporated: Literal["true", "false"] = Field(..., description="Incorporation status")
+    incorporated: Literal["true", "false"] = Field(
+        ..., description="Incorporation status"
+    )
     geoLat: float = Field(..., description="Geocoded latitude")
     geoLng: float = Field(..., description="Geocoded longitude")
 
@@ -140,7 +161,9 @@ class V60Response(BaseModel):
     service: V60Service = Field(..., description="Service taxability information")
     shipping: V60Shipping = Field(..., description="Shipping taxability information")
     sourcing_rules: Optional[V60SourcingRules] = Field(
-        None, alias="sourcingRules", description="Sourcing rules (origin/destination) taxation info"
+        None,
+        alias="sourcingRules",
+        description="Sourcing rules (origin/destination) taxation info",
     )
     tax_summaries: Optional[List[V60TaxSummary]] = Field(
         None, alias="taxSummaries", description="Tax rate summaries"
@@ -154,13 +177,21 @@ class V60AccountMetrics(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     core_request_count: int = Field(..., description="Number of core API requests made")
-    core_request_limit: int = Field(..., description="Maximum allowed core API requests")
+    core_request_limit: int = Field(
+        ..., description="Maximum allowed core API requests"
+    )
     core_usage_percent: float = Field(
         ..., description="Percentage of core request limit used"
     )
-    geo_enabled: bool = Field(..., description="Whether geolocation features are enabled")
-    geo_request_count: int = Field(..., description="Number of geolocation requests made")
-    geo_request_limit: int = Field(..., description="Maximum allowed geolocation requests")
+    geo_enabled: bool = Field(
+        ..., description="Whether geolocation features are enabled"
+    )
+    geo_request_count: int = Field(
+        ..., description="Number of geolocation requests made"
+    )
+    geo_request_limit: int = Field(
+        ..., description="Maximum allowed geolocation requests"
+    )
     geo_usage_percent: float = Field(
         ..., description="Percentage of geolocation request limit used"
     )

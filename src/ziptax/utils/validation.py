@@ -1,7 +1,7 @@
 """Validation utilities for the ZipTax SDK."""
 
 import re
-from typing import Optional
+
 from ..exceptions import ZipTaxValidationError
 
 

@@ -1,18 +1,18 @@
 """API functions for the ZipTax SDK."""
 
-from typing import Optional, Dict, Any
 import logging
+from typing import Any, Dict, Optional
 
-from ..models import V60Response, V60AccountMetrics
+from ..models import V60AccountMetrics, V60Response
 from ..utils.http import HTTPClient
+from ..utils.retry import retry_with_backoff
 from ..utils.validation import (
     validate_address,
     validate_coordinates,
     validate_country_code,
-    validate_historical_date,
     validate_format,
+    validate_historical_date,
 )
-from ..utils.retry import retry_with_backoff
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 class Functions:
     """Functions class for ZipTax API endpoints."""
 
-    def __init__(self, http_client: HTTPClient, max_retries: int = 3, retry_delay: float = 1.0):
+    def __init__(
+        self, http_client: HTTPClient, max_retries: int = 3, retry_delay: float = 1.0
+    ):
         """Initialize Functions.
 
         Args:

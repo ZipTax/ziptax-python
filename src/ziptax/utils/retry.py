@@ -1,15 +1,15 @@
 """Retry utilities for the ZipTax SDK."""
 
-import time
 import logging
-from typing import Callable, TypeVar, Any
+import time
 from functools import wraps
+from typing import Any, Awaitable, Callable, TypeVar
 
 from ..exceptions import (
+    ZipTaxConnectionError,
+    ZipTaxRateLimitError,
     ZipTaxRetryError,
     ZipTaxServerError,
-    ZipTaxRateLimitError,
-    ZipTaxConnectionError,
     ZipTaxTimeoutError,
 )
 
@@ -110,7 +110,7 @@ async def async_retry_with_backoff(
     base_delay: float = 1.0,
     max_delay: float = 60.0,
     exponential_base: float = 2.0,
-) -> Callable[[Callable[..., T]], Callable[..., T]]:
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """Decorator to retry an async function with exponential backoff.
 
     Args:
@@ -124,7 +124,7 @@ async def async_retry_with_backoff(
     """
     import asyncio
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             last_exception: Exception = Exception("Unknown error")

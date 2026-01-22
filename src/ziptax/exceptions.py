@@ -1,6 +1,6 @@
 """Exception classes for the ZipTax SDK."""
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 class ZipTaxError(Exception):
@@ -105,7 +105,9 @@ class ZipTaxTimeoutError(ZipTaxError):
 class ZipTaxRetryError(ZipTaxError):
     """Exception raised when max retries are exceeded."""
 
-    def __init__(self, message: str, attempts: int, last_exception: Optional[Exception] = None):
+    def __init__(
+        self, message: str, attempts: int, last_exception: Optional[Exception] = None
+    ):
         """Initialize ZipTaxRetryError.
 
         Args:

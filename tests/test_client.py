@@ -1,8 +1,8 @@
 """Tests for the ZipTaxClient."""
 
 import pytest
+
 from ziptax import ZipTaxClient
-from ziptax.config import Config
 from ziptax.exceptions import ZipTaxValidationError
 
 
