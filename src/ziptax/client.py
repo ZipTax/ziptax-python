@@ -1,7 +1,6 @@
 """Main client for the ZipTax SDK."""
 
 import logging
-from typing import Optional
 
 from .config import Config
 from .resources.functions import Functions
@@ -18,11 +17,17 @@ class ZipTaxClient:
         Basic usage:
         >>> client = ZipTaxClient.api_key('your-api-key')
         >>> client.config['format'] = 'json'
-        >>> response = client.request.GetSalesTaxByAddress("200 Spectrum Center Drive, Irvine, CA 92618")
+        >>> response = client.request.GetSalesTaxByAddress(
+        ...     "200 Spectrum Center Drive, Irvine, CA 92618"
+        ... )
 
         With custom configuration:
-        >>> client = ZipTaxClient.api_key('your-api-key', timeout=60, max_retries=5)
-        >>> response = client.request.GetSalesTaxByGeoLocation("33.6489", "-117.8386")
+        >>> client = ZipTaxClient.api_key(
+        ...     'your-api-key', timeout=60, max_retries=5
+        ... )
+        >>> response = client.request.GetSalesTaxByGeoLocation(
+        ...     "33.6489", "-117.8386"
+        ... )
     """
 
     def __init__(self, config: Config):

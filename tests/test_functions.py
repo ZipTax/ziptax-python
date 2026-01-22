@@ -1,10 +1,10 @@
 """Tests for API functions."""
 
 import pytest
-from unittest.mock import Mock, patch
-from ziptax.resources.functions import Functions
-from ziptax.models import V60Response, V60AccountMetrics
+
 from ziptax.exceptions import ZipTaxValidationError
+from ziptax.models import V60AccountMetrics, V60Response
+from ziptax.resources.functions import Functions
 
 
 class TestGetSalesTaxByAddress:
@@ -39,7 +39,10 @@ class TestGetSalesTaxByAddress:
 
         assert isinstance(response, V60Response)
         call_args = mock_http_client.get.call_args
-        assert call_args[1]["params"]["address"] == "200 Spectrum Center Drive, Irvine, CA 92618"
+        assert (
+            call_args[1]["params"]["address"]
+            == "200 Spectrum Center Drive, Irvine, CA 92618"
+        )
         assert call_args[1]["params"]["taxabilityCode"] == "12345"
         assert call_args[1]["params"]["historical"] == "2024-01"
 

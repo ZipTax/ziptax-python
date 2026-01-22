@@ -1,17 +1,18 @@
 """HTTP utilities for the ZipTax SDK."""
 
-import requests
-from typing import Dict, Any, Optional
 import logging
+from typing import Any, Dict, Optional, cast
+
+import requests
 
 from ..exceptions import (
     ZipTaxAPIError,
     ZipTaxAuthenticationError,
     ZipTaxAuthorizationError,
+    ZipTaxConnectionError,
     ZipTaxNotFoundError,
     ZipTaxRateLimitError,
     ZipTaxServerError,
-    ZipTaxConnectionError,
     ZipTaxTimeoutError,
 )
 
@@ -131,7 +132,7 @@ class HTTPClient:
             if not response.ok:
                 self._handle_error_response(response)
 
-            return response.json()
+            return cast(Dict[str, Any], response.json())
 
         except requests.exceptions.Timeout as e:
             raise ZipTaxTimeoutError(f"Request timed out after {self.timeout}s: {e}")

@@ -1,6 +1,6 @@
 """Configuration module for the ZipTax SDK."""
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class Config:

@@ -1,7 +1,9 @@
 """Pytest configuration and fixtures."""
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, MagicMock
+
 from ziptax import ZipTaxClient
 from ziptax.config import Config
 from ziptax.utils.http import HTTPClient
@@ -89,7 +91,9 @@ def sample_v60_response():
             }
         ],
         "addressDetail": {
-            "normalizedAddress": "200 Spectrum Center Dr, Irvine, CA 92618-5003, United States",
+            "normalizedAddress": (
+                "200 Spectrum Center Dr, Irvine, CA 92618-5003, United States"
+            ),
             "incorporated": "true",
             "geoLat": 33.65253,
             "geoLng": -117.74794,
