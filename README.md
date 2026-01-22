@@ -1,0 +1,400 @@
+# ZipTax Python SDK
+
+Official Python SDK for the [ZipTax API](https://zip-tax.com) - Get accurate sales and use tax rates for any US or Canadian address.
+
+[![Python Version](https://img.shields.io/pypi/pyversions/ziptax)](https://pypi.org/project/ziptax/)
+[![License](https://img.shields.io/github/license/ziptax/ziptax-python)](LICENSE)
+
+## Features
+
+- 🚀 Simple and intuitive API
+- 🔄 Automatic retry logic with exponential backoff
+- ✅ Input validation
+- 🔍 Type hints for better IDE support
+- 📦 Pydantic models for response validation
+- 🔒 Comprehensive error handling
+- ⚡ Support for concurrent operations
+- 🧪 Well-tested with high code coverage
+
+## Installation
+
+```bash
+pip install ziptax
+```
+
+## Quick Start
+
+```python
+from ziptax import ZipTaxClient
+
+# Initialize the client with your API key
+client = ZipTaxClient.api_key("your-api-key-here")
+
+# Get sales tax by address
+response = client.request.GetSalesTaxByAddress(
+    "200 Spectrum Center Drive, Irvine, CA 92618"
+)
+
+print(f"Address: {response.addressDetail.normalizedAddress}")
+if response.tax_summaries:
+    for summary in response.tax_summaries:
+        print(f"{summary.summary_name}: {summary.rate * 100:.2f}%")
+
+# Always close the client when done
+client.close()
+```
+
+## Usage
+
+### Initialize the Client
+
+```python
+from ziptax import ZipTaxClient
+
+# Basic initialization
+client = ZipTaxClient.api_key("your-api-key-here")
+
+# With custom configuration
+client = ZipTaxClient.api_key(
+    "your-api-key-here",
+    timeout=60,           # Request timeout in seconds
+    max_retries=5,        # Maximum retry attempts
+    retry_delay=2.0,      # Base delay between retries
+)
+
+# Using as a context manager (recommended)
+with ZipTaxClient.api_key("your-api-key-here") as client:
+    response = client.request.GetSalesTaxByAddress("123 Main St")
+```
+
+### Get Sales Tax by Address
+
+```python
+response = client.request.GetSalesTaxByAddress(
+    address="200 Spectrum Center Drive, Irvine, CA 92618",
+    country_code="USA",      # Optional: "USA" or "CAN" (default: "USA")
+    historical="2024-01",    # Optional: Historical date (YYYY-MM format)
+    format="json",           # Optional: "json" or "xml" (default: "json")
+)
+
+# Access response data
+print(response.addressDetail.normalizedAddress)
+print(response.addressDetail.geoLat)
+print(response.addressDetail.geoLng)
+
+# Response code
+print(f"Response: {response.metadata.response.code} - {response.metadata.response.message}")
+
+# Tax summaries with display rates
+if response.tax_summaries:
+    for summary in response.tax_summaries:
+        print(f"{summary.summary_name}: {summary.rate}")
+        for display_rate in summary.display_rates:
+            print(f"  {display_rate.name}: {display_rate.rate}")
+
+# Base rates by jurisdiction
+if response.base_rates:
+    for rate in response.base_rates:
+        print(f"{rate.jur_name} ({rate.jur_type}): {rate.rate}")
+
+# Sourcing rules
+if response.sourcing_rules:
+    print(f"Sourcing: {response.sourcing_rules.value}")
+```
+
+### Get Sales Tax by Geolocation
+
+```python
+response = client.request.GetSalesTaxByGeoLocation(
+    lat="33.6489",
+    lng="-117.8386",
+    country_code="USA",
+    format="json",
+)
+
+print(response.addressDetail.normalizedAddress)
+```
+
+### Get Account Metrics
+
+```python
+metrics = client.request.GetAccountMetrics()
+
+print(f"Core Requests: {metrics.core_request_count:,} / {metrics.core_request_limit:,}")
+print(f"Core Usage: {metrics.core_usage_percent:.2f}%")
+print(f"Geo Requests: {metrics.geo_request_count:,} / {metrics.geo_request_limit:,}")
+print(f"Geo Usage: {metrics.geo_usage_percent:.2f}%")
+print(f"Account Active: {metrics.is_active}")
+```
+
+### Configuration
+
+You can configure the client using dict-style access:
+
+```python
+client = ZipTaxClient.api_key("your-api-key-here")
+
+# Set configuration options
+client.config["format"] = "json"
+client.config["timeout"] = 60
+
+# Get configuration options
+timeout = client.config["timeout"]
+```
+
+## Error Handling
+
+The SDK provides comprehensive error handling with specific exception types:
+
+```python
+from ziptax import (
+    ZipTaxClient,
+    ZipTaxValidationError,
+    ZipTaxAuthenticationError,
+    ZipTaxRateLimitError,
+    ZipTaxServerError,
+    ZipTaxError,
+)
+
+client = ZipTaxClient.api_key("your-api-key-here")
+
+try:
+    response = client.request.GetSalesTaxByAddress("123 Main St")
+
+except ZipTaxValidationError as e:
+    # Input validation errors
+    print(f"Validation error: {e.message}")
+
+except ZipTaxAuthenticationError as e:
+    # Authentication failures (401)
+    print(f"Authentication error: {e.message}")
+
+except ZipTaxRateLimitError as e:
+    # Rate limit exceeded (429)
+    print(f"Rate limit error: {e.message}")
+    if e.retry_after:
+        print(f"Retry after {e.retry_after} seconds")
+
+except ZipTaxServerError as e:
+    # Server errors (5xx)
+    print(f"Server error: {e.message}")
+
+except ZipTaxError as e:
+    # General ZipTax errors
+    print(f"ZipTax error: {e.message}")
+```
+
+### Exception Hierarchy
+
+```
+ZipTaxError
+├── ZipTaxAPIError
+│   ├── ZipTaxAuthenticationError (401)
+│   ├── ZipTaxAuthorizationError (403)
+│   ├── ZipTaxNotFoundError (404)
+│   ├── ZipTaxRateLimitError (429)
+│   └── ZipTaxServerError (5xx)
+├── ZipTaxValidationError
+├── ZipTaxConnectionError
+├── ZipTaxTimeoutError
+└── ZipTaxRetryError
+```
+
+## Async Operations
+
+For concurrent operations, you can use asyncio with the SDK:
+
+```python
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from ziptax import ZipTaxClient
+
+async def get_tax_rates_async(client, addresses):
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as executor:
+        tasks = [
+            loop.run_in_executor(
+                executor,
+                client.request.GetSalesTaxByAddress,
+                address
+            )
+            for address in addresses
+        ]
+        return await asyncio.gather(*tasks)
+
+# Usage
+client = ZipTaxClient.api_key("your-api-key-here")
+addresses = ["123 Main St, CA", "456 Oak Ave, NY"]
+responses = asyncio.run(get_tax_rates_async(client, addresses))
+```
+
+See [examples/async_usage.py](examples/async_usage.py) for more examples.
+
+## Response Models
+
+All API responses are validated using Pydantic models:
+
+### V60Response
+
+```python
+class V60Response:
+    metadata: V60Metadata                           # Response metadata with code/message
+    base_rates: Optional[List[V60BaseRate]]        # Tax rates by jurisdiction
+    service: V60Service                             # Service taxability
+    shipping: V60Shipping                           # Shipping taxability
+    sourcing_rules: Optional[V60SourcingRules]     # Origin/Destination rules
+    tax_summaries: Optional[List[V60TaxSummary]]   # Tax summaries with display rates
+    addressDetail: V60AddressDetail                 # Address details
+```
+
+### V60Metadata
+
+```python
+class V60Metadata:
+    version: str                    # API version (e.g., "v60")
+    response: V60ResponseInfo       # Response info object
+
+class V60ResponseInfo:
+    code: int                       # Response code (100 = success)
+    name: str                       # Response code name
+    message: str                    # Response message
+    definition: str                 # Schema definition URL
+```
+
+### V60TaxSummary
+
+```python
+class V60TaxSummary:
+    rate: float                                    # Summary tax rate
+    tax_type: str                                  # Tax type (e.g., "SALES_TAX")
+    summary_name: str                              # Summary description
+    display_rates: List[V60DisplayRate]           # Display rates breakdown
+
+class V60DisplayRate:
+    name: str                                      # Display rate name
+    rate: float                                    # Display rate value
+```
+
+### V60AccountMetrics
+
+```python
+class V60AccountMetrics:
+    core_request_count: int
+    core_request_limit: int
+    core_usage_percent: float
+    geo_enabled: bool
+    geo_request_count: int
+    geo_request_limit: int
+    geo_usage_percent: float
+    is_active: bool
+    message: str
+```
+
+See the [models documentation](src/ziptax/models/responses.py) for complete model definitions.
+
+## Development
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/ziptax/ziptax-python.git
+cd ziptax-python
+
+# Install dependencies
+pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src/ziptax --cov-report=html
+
+# Run specific test file
+pytest tests/test_client.py
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src/ tests/
+
+# Lint code
+ruff src/ tests/
+
+# Type checking
+mypy src/
+```
+
+## Examples
+
+See the [examples/](examples/) directory for complete examples:
+
+- [basic_usage.py](examples/basic_usage.py) - Basic SDK usage
+- [async_usage.py](examples/async_usage.py) - Concurrent operations
+- [error_handling.py](examples/error_handling.py) - Error handling patterns
+
+## API Reference
+
+### ZipTaxClient
+
+Main client for interacting with the ZipTax API.
+
+#### Methods
+
+- `api_key(api_key, **kwargs)` - Create a client instance with an API key
+- `close()` - Close the HTTP client session
+
+#### Properties
+
+- `config` - Configuration object (dict-like access)
+- `request` - Functions object for making API requests
+
+### Functions
+
+API endpoint functions accessible via `client.request`.
+
+#### Methods
+
+- `GetSalesTaxByAddress(address, **kwargs)` - Get tax rates by address
+- `GetSalesTaxByGeoLocation(lat, lng, **kwargs)` - Get tax rates by coordinates
+- `GetAccountMetrics(**kwargs)` - Get account usage metrics
+
+## Requirements
+
+- Python 3.8+
+- requests >= 2.28.0
+- pydantic >= 2.0.0
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- Documentation: [https://github.com/ziptax/ziptax-python#readme](https://github.com/ziptax/ziptax-python#readme)
+- Issues: [https://github.com/ziptax/ziptax-python/issues](https://github.com/ziptax/ziptax-python/issues)
+- Email: support@zip.tax
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
+
+---
+
+Made with ❤️ by the ZipTax Team

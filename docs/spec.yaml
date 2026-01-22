@@ -1,0 +1,724 @@
+# =============================================================================
+# SDK Generation Template for ZipTax API
+# =============================================================================
+# This template provides a comprehensive spec for codegen agents
+
+# -----------------------------------------------------------------------------
+# Project Metadata
+# -----------------------------------------------------------------------------
+project:
+  name: "ziptax-python"
+  language: "python"
+  version: "1.0.0"
+  description: "Official Python SDK for the ZipTax API"
+
+  # Repository information
+  repository:
+    url: "https://github.com/ziptax/ziptax-python"
+    type: "git"
+
+  # License
+  license: "MIT"
+
+  # Maintainer information
+  maintainers:
+    - name: "ZipTax Team"
+      email: "support@zip.tax"
+
+# -----------------------------------------------------------------------------
+# API Configuration
+# -----------------------------------------------------------------------------
+api:
+  # Base API details
+  name: "ZipTax API"
+  version: "v60"
+  base_url: "https://api.zip-tax.com/"
+
+  # API specification source
+  spec:
+    type: "openapi"
+    version: "3.0.0"
+    source: "https://api.zip-tax.com/openapi.json"
+
+  # Authentication methods
+  authentication:
+    type: "api_key"
+    location: "header"
+    parameter_name: "X-API-Key"
+
+    # Additional auth configurations
+    supports_multiple_methods: false
+    methods: []
+
+# -----------------------------------------------------------------------------
+# SDK Configuration
+# -----------------------------------------------------------------------------
+sdk:
+  # Package/module naming
+  package_name: "ziptax"
+  namespace: "Ziptax"
+
+  # SDK structure approach
+  structure:
+    type: "client-based"
+    client_class: "ZiptaxClient"
+
+  # Features to include
+  features:
+    async_support: true       # Include async/await methods
+    retry_logic: true         # Automatic retry on failures
+    request_logging: true     # Built-in request/response logging
+    response_caching: false   # Cache responses
+    pagination_helpers: true  # Helper methods for paginated endpoints
+    batch_operations: false   # Batch request support
+    webhooks: false           # Webhook handling utilities
+
+  # Error handling
+  error_handling:
+    use_custom_exceptions: true
+    exception_hierarchy: true  # Create exception hierarchy
+    include_retry_exceptions: true
+
+  # Type safety
+  type_safety:
+    use_type_hints: true      # Language-specific
+    validate_inputs: true     # Runtime input validation
+    strict_mode: false        # Strict type checking
+
+# -----------------------------------------------------------------------------
+# API Endpoints & Resources
+# -----------------------------------------------------------------------------
+# Define the API structure and endpoints to implement
+resources:
+      - name: "GetSalesTaxByAddress"
+        http_method: "GET"
+        path: "/request/v60/"
+        description: "Returns sales and use tax rate details from an address input."
+        operation_id: "getTaxRatesV60"
+        parameters:
+          - name: "address"
+            type: "string"
+            required: true
+            location: "query"
+            description: "Full or partial street address for geocoding"
+            validation:
+              max_length: 100
+          - name: "taxabilityCode"
+            type: "string"
+            format: "date"
+            required: false
+            location: "query"
+            description: "Historical date for rates (YYYY-MM format)"
+            validation:
+              pattern: "^[0-9]{4}-[0-9]{2}$"
+          - name: "countryCode"
+            type: "string"
+            required: false
+            location: "query"
+            description: "Country code"
+            default: "USA"
+            enum: ["USA", "CAN"]
+          - name: "historical"
+            type: "string"
+            format: "date"
+            required: false
+            location: "query"
+            description: "Historical date for rates (YYYY-MM format)"
+            validation:
+              pattern: "^[0-9]{4}-[0-9]{2}$"
+          - name: "format"
+            type: "string"
+            required: false
+            location: "query"
+            description: "Response format"
+            default: "json"
+            enum: ["json", "xml"]
+        returns:
+          type: "V60Response"
+          is_array: false
+      - name: "GetSalesTaxByGeoLocation"
+        http_method: "GET"
+        path: "/request/v60/"
+        description: "Returns sales and use tax rate details from a geolocation input."
+        operation_id: "getTaxRatesV60"
+        parameters:
+          - name: "lat"
+            type: "string"
+            required: true
+            location: "query"
+            description: "Latitude for geolocation"
+            validation:
+              max_length: 100
+          - name: "lng"
+            type: "string"
+            required: true
+            location: "query"
+            description: "Longitude for geolocation"
+            validation:
+              max_length: 100
+          - name: "countryCode"
+            type: "string"
+            required: false
+            location: "query"
+            description: "Country code"
+            default: "USA"
+            enum: ["USA", "CAN"]
+          - name: "historical"
+            type: "string"
+            format: "date"
+            required: false
+            location: "query"
+            description: "Historical date for rates (YYYY-MM format)"
+            validation:
+              pattern: "^[0-9]{4}-[0-9]{2}$"
+          - name: "format"
+            type: "string"
+            required: false
+            location: "query"
+            description: "Response format"
+            default: "json"
+            enum: ["json", "xml"]
+        returns:
+          type: "V60Response"
+          is_array: false
+      - name: "GetAccountMetrics"
+        http_method: "GET"
+        path: "/account/v60/metrics"
+        description: "Returns account metrics related to sales and use tax."
+        operation_id: "getAccountMetricsV60"
+        parameters:
+          - name: "key"
+            type: "string"
+            required: false
+            location: "query"
+            description: "Response format"
+            default: "json"
+            enum: ["json", "xml"]
+        returns:
+          type: "V60AccountMetrics"
+          is_array: false
+          
+# -----------------------------------------------------------------------------
+# Data Models
+# -----------------------------------------------------------------------------
+# Define the data structures/models used in the API
+models:
+  # ---------------------------------------------------------------------------
+  # API Version 6.0 Models (Latest)
+  # ---------------------------------------------------------------------------
+  - name: "V60Response"
+    description: "Response for v6.0 API - structured format with separate components"
+    properties:
+      - name: "metadata"
+        type: "V60Metadata"
+        required: true
+        description: "Response metadata"
+      - name: "base_rates"
+        type: "array"
+        items_type: "V60BaseRate"
+        required: true
+        nullable: true
+        description: "Base tax rates by jurisdiction"
+      - name: "service"
+        type: "V60Service"
+        required: true
+        description: "Service taxability information"
+      - name: "shipping"
+        type: "V60Shipping"
+        required: true
+        description: "Shipping taxability information"
+      - name: "origin_destination"
+        type: "V60OriginDestination"
+        required: true
+        description: "Origin/destination taxation info"
+      - name: "tax_summaries"
+        type: "array"
+        items_type: "V60TaxSummary"
+        required: true
+        nullable: true
+        description: "Tax rate summaries"
+      - name: "addressDetail"
+        type: "V60AddressDetail"
+        required: true
+        description: "Address details"
+
+  - name: "V60Metadata"
+    description: "Metadata for v6.0 response"
+    properties:
+      - name: "version"
+        type: "string"
+        required: true
+        description: "API version"
+        example: "v60"
+      - name: "rCode"
+        type: "integer"
+        format: "int64"
+        required: true
+        description: "Response code (100=success)"
+        example: 100
+
+  - name: "V60BaseRate"
+    description: "Base tax rate for a specific jurisdiction"
+    properties:
+      - name: "rate"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Tax rate"
+      - name: "rate_id"
+        type: "string"
+        required: true
+        description: "Rate identifier from tax table"
+      - name: "jur_type"
+        type: "string"
+        required: true
+        description: "Jurisdiction type"
+        enum:
+          - "US_STATE_SALES_TAX"
+          - "US_STATE_USE_TAX"
+          - "US_COUNTY_SALES_TAX"
+          - "US_COUNTY_USE_TAX"
+          - "US_CITY_SALES_TAX"
+          - "US_CITY_USE_TAX"
+          - "US_DISTRICT_SALES_TAX"
+          - "US_DISTRICT_USE_TAX"
+      - name: "jur_name"
+        type: "string"
+        required: true
+        description: "Jurisdiction name"
+        enum:
+          - "US_STATE"
+          - "US_COUNTY"
+          - "US_CITY"
+          - "US_DISTRICT"
+      - name: "jur_description"
+        type: "string"
+        required: true
+        description: "Jurisdiction description"
+      - name: "jur_tax_code"
+        type: "string"
+        required: true
+        description: "Tax code for jurisdiction"
+
+  - name: "V60Service"
+    description: "Service taxability information"
+    properties:
+      - name: "adjustment_type"
+        type: "string"
+        required: true
+        description: "Service adjustment type"
+        example: "SERVICE_TAXABLE"
+      - name: "taxable"
+        type: "string"
+        required: true
+        description: "Taxability indicator"
+        enum: ["Y", "N"]
+      - name: "description"
+        type: "string"
+        required: true
+        description: "Service description"
+
+  - name: "V60Shipping"
+    description: "Shipping taxability information"
+    properties:
+      - name: "adjustment_type"
+        type: "string"
+        required: true
+        description: "Shipping adjustment type"
+        example: "FREIGHT_TAXABLE"
+      - name: "taxable"
+        type: "string"
+        required: true
+        description: "Taxability indicator"
+        enum: ["Y", "N"]
+      - name: "description"
+        type: "string"
+        required: true
+        description: "Shipping description"
+
+  - name: "V60OriginDestination"
+    description: "Origin/destination taxation information"
+    properties:
+      - name: "adjustment_type"
+        type: "string"
+        required: true
+        description: "Origin/destination type"
+        example: "ORIGIN_DESTINATION"
+      - name: "description"
+        type: "string"
+        required: true
+        description: "Origin/destination description"
+      - name: "value"
+        type: "string"
+        required: true
+        description: "Origin/destination value"
+        enum: ["O", "D"]
+
+  - name: "V60TaxSummary"
+    description: "Tax rate summary"
+    properties:
+      - name: "rate"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Summary tax rate"
+      - name: "tax_type"
+        type: "string"
+        required: true
+        description: "Tax type"
+        enum: ["SALES_TAX", "USE_TAX"]
+      - name: "summary_name"
+        type: "string"
+        required: true
+        description: "Summary description"
+
+  - name: "V60AddressDetail"
+    description: "Address detail information for v6.0"
+    properties:
+      - name: "normalizedAddress"
+        type: "string"
+        required: true
+        description: "Normalized address"
+      - name: "incorporated"
+        type: "string"
+        required: true
+        description: "Incorporation status"
+        enum: ["true", "false"]
+      - name: "geoLat"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Geocoded latitude"
+      - name: "geoLng"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Geocoded longitude"
+  - name: "V60AccountMetrics"
+    description: "Account metrics by API key"
+    properties:
+      - name: "core_request_count"
+        type: "integer"
+        format: "int64"
+        required: true
+        description: "Number of core API requests made"
+      - name: "core_request_limit"
+        type: "integer"
+        format: "int64"
+        required: true
+        description: "Maximum allowed core API requests"
+      - name: "core_usage_percent"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Percentage of core request limit used"
+      - name: "geo_enabled"
+        type: "boolean"
+        required: true
+        description: "Whether geolocation features are enabled"
+      - name: "geo_request_count"
+        type: "integer"
+        format: "int64"
+        required: true
+        description: "Number of geolocation requests made"
+      - name: "geo_request_limit"
+        type: "integer"
+        format: "int64"
+        required: true
+        description: "Maximum allowed geolocation requests"
+      - name: "geo_usage_percent"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Percentage of geolocation request limit used"
+      - name: "is_active"
+        type: "boolean"
+        required: true
+        description: "Whether the account is currently active"
+      - name: "message"
+        type: "string"
+        required: true
+        description: "Account status or informational message"
+
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+dependencies:
+  # Runtime dependencies
+  runtime:
+    - name: "requests"        # HTTP client library (language-specific)
+      version: ">=2.28.0"
+      purpose: "HTTP requests"
+    - name: "pydantic"        # Data validation (language-specific)
+      version: ">=2.0.0"
+      purpose: "Data validation and models"
+
+  # Development dependencies
+  development:
+    - name: "pytest"
+      version: ">=7.0.0"
+      purpose: "Testing framework"
+    - name: "pytest-cov"
+      version: ">=4.0.0"
+      purpose: "Code coverage"
+    - name: "black"
+      version: ">=23.0.0"
+      purpose: "Code formatting"
+    - name: "mypy"
+      version: ">=1.0.0"
+      purpose: "Type checking"
+    - name: "ruff"
+      version: ">=0.1.0"
+      purpose: "Linting"
+
+# -----------------------------------------------------------------------------
+# Project Structure
+# -----------------------------------------------------------------------------
+# Define the directory structure for the SDK
+structure:
+  root_files:
+    - "README.md"
+    - "LICENSE"
+    - "setup.py"
+    - ".gitignore"
+    - "pyproject.toml"
+
+  directories:
+    - path: "src/ziptax"
+      contents:
+        - "__init__.py"
+        - "client.py"
+        - "config.py"
+        - "exceptions.py"
+
+    - path: "src/ziptax/resources"
+      contents:
+        - "__init__.py"
+        - "functions.py"
+
+    - path: "src/ziptax/models"
+      contents:
+        - "__init__.py"
+        - "responses.py"
+
+    - path: "src/ziptax/utils"
+      contents:
+        - "__init__.py"
+        - "http.py"
+        - "retry.py"
+        - "validation.py"
+
+    - path: "tests"
+      contents:
+        - "__init__.py"
+        - "test_client.py"
+        - "test_functions.py"
+        - "conftest.py"
+
+    - path: "examples"
+      contents:
+        - "basic_usage.py"
+        - "async_usage.py"
+        - "error_handling.py"
+
+    - path: "docs"
+      contents:
+        - "index.md"
+        - "quickstart.md"
+        - "api-reference.md"
+
+# -----------------------------------------------------------------------------
+# Code Generation Settings
+# -----------------------------------------------------------------------------
+code_generation:
+  # Style guide compliance
+  style:
+    follow_language_conventions: true
+    style_guide: "PEP 8"
+    line_length: 88
+    indent_size: 4
+    indent_style: "spaces"
+
+  # Documentation
+  documentation:
+    style: "google"
+    include_examples: true
+    include_type_info: true
+    minimum_coverage: "public_api"
+
+  # Testing
+  testing:
+    framework: "pytest"
+    include_unit_tests: true
+    include_integration_tests: true
+    mock_api_responses: true
+    target_coverage: 80
+
+  # Code quality
+  quality:
+    include_linter_config: true
+    include_formatter_config: true
+    include_type_checker_config: true
+    include_pre_commit_hooks: true
+
+# -----------------------------------------------------------------------------
+# Build & Distribution
+# -----------------------------------------------------------------------------
+build:
+  # Build system
+  system: "setuptools"
+
+  # Build configuration
+  output_directory: "dist"
+
+  # Distribution
+  distribution:
+    platforms:
+      - "pypi"
+
+    # Package metadata
+    classifiers:
+      - "Development Status :: 4 - Beta"
+      - "Intended Audience :: Developers"
+      - "License :: OSI Approved :: MIT License"
+      - "Programming Language :: Python :: 3"
+      - "Programming Language :: Python :: 3.8"
+      - "Programming Language :: Python :: 3.9"
+      - "Programming Language :: Python :: 3.10"
+      - "Programming Language :: Python :: 3.11"
+
+    keywords:
+      - "tax"
+      - "ziptax"
+      - "api"
+      - "sdk"
+      - "sales tax"
+
+# -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+documentation:
+  # Documentation tools
+  generator: "sphinx"
+  theme: "readthedocs"
+
+  # Content requirements
+  sections:
+    - name: "Installation"
+      required: true
+    - name: "Quick Start"
+      required: true
+    - name: "Authentication"
+      required: true
+    - name: "API Reference"
+      required: true
+      auto_generate: true
+    - name: "Error Handling"
+      required: true
+    - name: "Examples"
+      required: true
+    - name: "Contributing"
+      required: false
+    - name: "Changelog"
+      required: true
+
+  # API documentation
+  api_docs:
+    include_request_examples: true
+    include_response_examples: true
+    include_error_examples: true
+    format: "markdown"
+
+# -----------------------------------------------------------------------------
+# Examples
+# -----------------------------------------------------------------------------
+examples:
+  - name: "Basic Usage"
+    file: "examples/basic_usage.py"
+    description: "Simple example showing basic SDK initialization and usage"
+    required: true
+
+  - name: "Async Operations"
+    file: "examples/async_usage.py"
+    description: "Example using async/await for concurrent operations"
+    required: false
+
+  - name: "Error Handling"
+    file: "examples/error_handling.py"
+    description: "Demonstrates proper error handling patterns"
+    required: true
+
+  - name: "Pagination"
+    file: "examples/pagination.py"
+    description: "Working with paginated endpoints"
+    required: false
+
+# -----------------------------------------------------------------------------
+# CI/CD Configuration
+# -----------------------------------------------------------------------------
+ci_cd:
+  # Continuous Integration
+  platform: "github_actions"
+
+  workflows:
+    - name: "Test"
+      triggers: ["push", "pull_request"]
+      jobs:
+        - "lint"
+        - "type-check"
+        - "test"
+        - "coverage"
+
+    - name: "Publish"
+      triggers: ["release"]
+      jobs:
+        - "build"
+        - "publish"
+
+  # Testing matrix
+  test_matrix:
+    python_versions: ["3.8", "3.9", "3.10", "3.11"]
+    os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+
+# -----------------------------------------------------------------------------
+# Additional Instructions
+# -----------------------------------------------------------------------------
+# Any special instructions or considerations for this SDK
+instructions:
+  special_considerations:
+    - "Ensure all monetary values use appropriate decimal/currency types"
+    - "ZIP codes should be validated for format"
+    - "Date handling should respect timezone requirements"
+    - "All API responses should be properly typed"
+
+  # Code patterns to follow
+  patterns:
+    - pattern: "Config-based client initialization"
+      example: |
+        client = ZipTaxClient.api_key('xxx')
+        client.config['format'] = 'json'
+        client.request.GetSalesTaxByAddress("200 Spectrum Center Drive, Irvine, CA 92618")
+
+    - pattern: "Resource-based method organization"
+      example: "client.request.GetSalesTaxByAddress(address)"
+
+    - pattern: "Consistent error handling"
+      example: "try/except blocks with specific exception types"
+
+  # Avoid these patterns
+  anti_patterns:
+    - "Don't use global state for configuration"
+    - "Avoid bare except clauses"
+    - "Don't ignore type hints in favor of dynamic typing"
+
+# -----------------------------------------------------------------------------
+# Version History
+# -----------------------------------------------------------------------------
+version_history:
+  - version: "1.0.0"
+    date: "2024-01-15"
+    changes:
+      - "Initial release"
+      - "Support for TaxRates and Jurisdictions resources"
+      - "Basic authentication and error handling"
