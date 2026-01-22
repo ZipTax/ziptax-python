@@ -202,6 +202,13 @@ resources:
 # Data Models
 # -----------------------------------------------------------------------------
 # Define the data structures/models used in the API
+#
+# IMPORTANT IMPLEMENTATION NOTES:
+# 1. Use Pydantic v2 with ConfigDict (not deprecated Config class)
+# 2. API returns camelCase fields - use Field aliases for snake_case SDK fields
+# 3. Many fields are OPTIONAL in real responses despite appearing required
+# 4. Jurisdiction names (jurName) contain actual values like "CA", "ORANGE" - NOT enums
+# 5. See "actual_api_responses" section below for real response structures
 models:
   # ---------------------------------------------------------------------------
   # API Version 6.0 Models (Latest)
@@ -216,8 +223,8 @@ models:
       - name: "base_rates"
         type: "array"
         items_type: "V60BaseRate"
-        required: true
-        nullable: true
+        required: false  # Can be null/missing
+        api_field: "baseRates"  # API uses camelCase
         description: "Base tax rates by jurisdiction"
       - name: "service"
         type: "V60Service"
@@ -227,19 +234,21 @@ models:
         type: "V60Shipping"
         required: true
         description: "Shipping taxability information"
-      - name: "origin_destination"
-        type: "V60OriginDestination"
-        required: true
-        description: "Origin/destination taxation info"
+      - name: "sourcing_rules"
+        type: "V60SourcingRules"
+        required: false  # Can be null/missing
+        api_field: "sourcingRules"  # IMPORTANT: API field is 'sourcingRules' not 'originDestination'
+        description: "Sourcing rules (origin vs destination)"
       - name: "tax_summaries"
         type: "array"
         items_type: "V60TaxSummary"
-        required: true
-        nullable: true
+        required: false  # Can be null/missing
+        api_field: "taxSummaries"  # API uses camelCase
         description: "Tax rate summaries"
       - name: "addressDetail"
         type: "V60AddressDetail"
         required: true
+        api_field: "addressDetail"  # API keeps this as camelCase (no snake_case conversion)
         description: "Address details"
 
   - name: "V60Metadata"
@@ -250,12 +259,35 @@ models:
         required: true
         description: "API version"
         example: "v60"
-      - name: "rCode"
+      - name: "response"
+        type: "V60ResponseInfo"
+        required: true
+        description: "Response information (NESTED OBJECT - not flat)"
+
+  - name: "V60ResponseInfo"
+    description: "Response information nested in metadata"
+    properties:
+      - name: "code"
         type: "integer"
         format: "int64"
         required: true
         description: "Response code (100=success)"
         example: 100
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Response code name"
+        example: "RESPONSE_CODE_SUCCESS"
+      - name: "message"
+        type: "string"
+        required: true
+        description: "Response message"
+        example: "Successful API Request."
+      - name: "definition"
+        type: "string"
+        required: true
+        description: "Schema definition URL"
+        example: "http://api.zip-tax.com/request/v60/schema"
 
   - name: "V60BaseRate"
     description: "Base tax rate for a specific jurisdiction"
@@ -264,41 +296,36 @@ models:
         type: "number"
         format: "float"
         required: true
-        description: "Tax rate"
+        description: "Tax rate (decimal format, e.g., 0.0775 for 7.75%)"
       - name: "rate_id"
         type: "string"
-        required: true
+        required: false  # OPTIONAL in real API responses
+        api_field: "rateId"  # API uses camelCase
         description: "Rate identifier from tax table"
       - name: "jur_type"
-        type: "string"
+        type: "string"  # STRING not enum - API may return various types
         required: true
-        description: "Jurisdiction type"
-        enum:
-          - "US_STATE_SALES_TAX"
-          - "US_STATE_USE_TAX"
-          - "US_COUNTY_SALES_TAX"
-          - "US_COUNTY_USE_TAX"
-          - "US_CITY_SALES_TAX"
-          - "US_CITY_USE_TAX"
-          - "US_DISTRICT_SALES_TAX"
-          - "US_DISTRICT_USE_TAX"
+        api_field: "jurType"  # API uses camelCase
+        description: "Jurisdiction type (e.g., US_STATE_SALES_TAX, US_COUNTY_SALES_TAX)"
+        example: "US_STATE_SALES_TAX"
       - name: "jur_name"
-        type: "string"
+        type: "string"  # STRING not enum - contains actual names like "CA", "ORANGE"
         required: true
-        description: "Jurisdiction name"
-        enum:
-          - "US_STATE"
-          - "US_COUNTY"
-          - "US_CITY"
-          - "US_DISTRICT"
+        api_field: "jurName"  # API uses camelCase
+        description: "Actual jurisdiction name (e.g., 'CA', 'ORANGE', 'IRVINE')"
+        example: "CA"
       - name: "jur_description"
         type: "string"
-        required: true
-        description: "Jurisdiction description"
+        required: false  # OPTIONAL in real API responses
+        api_field: "jurDescription"  # API uses camelCase
+        description: "Human-readable jurisdiction description"
+        example: "US State Sales Tax"
       - name: "jur_tax_code"
         type: "string"
-        required: true
+        required: false  # OPTIONAL in real API responses
+        api_field: "jurTaxCode"  # API uses camelCase
         description: "Tax code for jurisdiction"
+        example: "06"
 
   - name: "V60Service"
     description: "Service taxability information"
@@ -306,6 +333,7 @@ models:
       - name: "adjustment_type"
         type: "string"
         required: true
+        api_field: "adjustmentType"  # API uses camelCase
         description: "Service adjustment type"
         example: "SERVICE_TAXABLE"
       - name: "taxable"
@@ -324,6 +352,7 @@ models:
       - name: "adjustment_type"
         type: "string"
         required: true
+        api_field: "adjustmentType"  # API uses camelCase
         description: "Shipping adjustment type"
         example: "FREIGHT_TAXABLE"
       - name: "taxable"
@@ -336,22 +365,25 @@ models:
         required: true
         description: "Shipping description"
 
-  - name: "V60OriginDestination"
-    description: "Origin/destination taxation information"
+  - name: "V60SourcingRules"
+    description: "Sourcing rules (origin vs destination) - API field is 'sourcingRules'"
+    api_field: "sourcingRules"  # IMPORTANT: Not 'originDestination'
     properties:
       - name: "adjustment_type"
         type: "string"
         required: true
-        description: "Origin/destination type"
+        api_field: "adjustmentType"  # API uses camelCase
+        description: "Sourcing rules type"
         example: "ORIGIN_DESTINATION"
       - name: "description"
         type: "string"
         required: true
-        description: "Origin/destination description"
+        description: "Sourcing rules description"
+        example: "Destination Based Taxation"
       - name: "value"
         type: "string"
         required: true
-        description: "Origin/destination value"
+        description: "Origin/destination indicator"
         enum: ["O", "D"]
 
   - name: "V60TaxSummary"
@@ -363,14 +395,38 @@ models:
         required: true
         description: "Summary tax rate"
       - name: "tax_type"
-        type: "string"
+        type: "string"  # STRING not strict enum
         required: true
-        description: "Tax type"
-        enum: ["SALES_TAX", "USE_TAX"]
+        api_field: "taxType"  # API uses camelCase
+        description: "Tax type (e.g., SALES_TAX, USE_TAX)"
+        example: "SALES_TAX"
       - name: "summary_name"
         type: "string"
         required: true
+        api_field: "summaryName"  # API uses camelCase
         description: "Summary description"
+        example: "Total Base Sales Tax"
+      - name: "display_rates"
+        type: "array"
+        items_type: "V60DisplayRate"
+        required: true
+        api_field: "displayRates"  # API uses camelCase
+        description: "Array of display rate breakdowns"
+
+  - name: "V60DisplayRate"
+    description: "Display rate breakdown within tax summary"
+    properties:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Display rate name"
+        example: "Total Rate"
+      - name: "rate"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Display rate value"
+        example: 0.0775
 
   - name: "V60AddressDetail"
     description: "Address detail information for v6.0"
@@ -514,6 +570,8 @@ structure:
         - "__init__.py"
         - "test_client.py"
         - "test_functions.py"
+        - "test_http.py"      # REQUIRED: Tests for HTTPClient utility
+        - "test_retry.py"     # REQUIRED: Tests for retry logic
         - "conftest.py"
 
     - path: "examples"
@@ -711,6 +769,154 @@ instructions:
     - "Don't use global state for configuration"
     - "Avoid bare except clauses"
     - "Don't ignore type hints in favor of dynamic typing"
+
+# -----------------------------------------------------------------------------
+# Actual API Response Examples
+# -----------------------------------------------------------------------------
+# CRITICAL: These are REAL API responses - use these to validate model structure
+actual_api_responses:
+  v60_tax_lookup:
+    description: "Actual V60 response for GetSalesTaxByAddress"
+    endpoint: "GET /request/v60/"
+    example: |
+      {
+        "metadata": {
+          "version": "v60",
+          "response": {
+            "code": 100,
+            "name": "RESPONSE_CODE_SUCCESS",
+            "message": "Successful API Request.",
+            "definition": "http://api.zip-tax.com/request/v60/schema"
+          }
+        },
+        "baseRates": [
+          {
+            "rate": 0.06,
+            "jurType": "US_STATE_SALES_TAX",
+            "jurName": "CA",
+            "jurDescription": "US State Sales Tax",
+            "jurTaxCode": "06"
+          },
+          {
+            "rate": 0.0025,
+            "jurType": "US_COUNTY_SALES_TAX",
+            "jurName": "ORANGE",
+            "jurDescription": "US County Sales Tax"
+          },
+          {
+            "rate": 0.015,
+            "jurType": "US_CITY_SALES_TAX",
+            "jurName": "IRVINE"
+          }
+        ],
+        "service": {
+          "adjustmentType": "SERVICE_TAXABLE",
+          "taxable": "N",
+          "description": "Services non-taxable"
+        },
+        "shipping": {
+          "adjustmentType": "FREIGHT_TAXABLE",
+          "taxable": "N",
+          "description": "Freight non-taxable"
+        },
+        "sourcingRules": {
+          "adjustmentType": "ORIGIN_DESTINATION",
+          "description": "Destination Based Taxation",
+          "value": "D"
+        },
+        "taxSummaries": [
+          {
+            "rate": 0.0775,
+            "taxType": "SALES_TAX",
+            "summaryName": "Total Base Sales Tax",
+            "displayRates": [
+              {
+                "name": "Total Rate",
+                "rate": 0.0775
+              }
+            ]
+          }
+        ],
+        "addressDetail": {
+          "normalizedAddress": "200 Spectrum Center Dr, Irvine, CA 92618-5003, United States",
+          "incorporated": "true",
+          "geoLat": 33.65253,
+          "geoLng": -117.74794
+        }
+      }
+
+  v60_account_metrics:
+    description: "Actual V60AccountMetrics response"
+    endpoint: "GET /account/v60/metrics"
+    example: |
+      {
+        "core_request_count": 15595,
+        "core_request_limit": 1000000,
+        "core_usage_percent": 1.5595,
+        "geo_enabled": true,
+        "geo_request_count": 43891,
+        "geo_request_limit": 1000000,
+        "geo_usage_percent": 4.3891,
+        "is_active": true,
+        "message": "Contact support@zip.tax to modify your account"
+      }
+
+# -----------------------------------------------------------------------------
+# CI/CD Quality Requirements
+# -----------------------------------------------------------------------------
+# These are MANDATORY - all checks must pass for the SDK to be release-ready
+quality_requirements:
+  code_coverage:
+    minimum: 80
+    tool: "pytest-cov"
+    command: "pytest --cov=src/ziptax --cov-report=term && coverage report --fail-under=80"
+    critical_modules:
+      - "src/ziptax/utils/http.py"
+      - "src/ziptax/utils/retry.py"
+      - "src/ziptax/exceptions.py"
+
+  type_checking:
+    tool: "mypy"
+    version: ">=1.0.0"
+    python_version: "3.9"  # Important: 3.8 not supported by mypy
+    strict: false
+    command: "mypy src/ziptax/"
+    config:
+      warn_return_any: false
+      warn_unused_configs: true
+      disallow_untyped_defs: false
+    notes:
+      - "Use 'cast' for Dict[str, Any] returns from response.json()"
+      - "Async decorators must return Callable[..., Awaitable[T]] not Callable[..., T]"
+
+  code_formatting:
+    tool: "black"
+    version: ">=23.0.0"
+    line_length: 88
+    command: "black --check src/ tests/"
+
+  linting:
+    tool: "ruff"
+    version: ">=0.1.0"
+    command: "ruff check src/ tests/"
+    config_section: "[tool.ruff.lint]"  # Modern ruff uses this, not [tool.ruff]
+    per_file_ignores:
+      - file: "src/ziptax/models/responses.py"
+        ignore: ["N815"]  # Allow camelCase for API field names
+      - file: "src/ziptax/resources/functions.py"
+        ignore: ["N802"]  # Allow PascalCase for API endpoint function names
+
+  pydantic_requirements:
+    version: ">=2.0.0"
+    use_config_dict: true  # MUST use ConfigDict, not deprecated Config class
+    field_aliases: true  # Required for camelCase to snake_case mapping
+    example: |
+      from pydantic import BaseModel, ConfigDict, Field
+
+      class MyModel(BaseModel):
+          model_config = ConfigDict(populate_by_name=True)
+
+          my_field: str = Field(..., alias="myField")  # API uses camelCase
 
 # -----------------------------------------------------------------------------
 # Version History
