@@ -25,10 +25,10 @@ pip install ziptax-sdk
 ## Quick Start
 
 ```python
-from ziptax import ZiptaxClient
+from ziptax import ZipTaxClient
 
 # Initialize the client with your API key
-client = ZiptaxClient.api_key("your-api-key-here")
+client = ZipTaxClient.api_key("your-api-key-here")
 
 # Get sales tax by address
 response = client.request.GetSalesTaxByAddress(
