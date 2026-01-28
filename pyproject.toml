@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ziptax"
-version = "1.0.0"
-description = "Official Python SDK for the ZipTax API"
+name = "ziptax-sdk"
+version = "0.1.0-beta"
+description = "Official Python SDK for the Ziptax API"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "ZipTax Team", email = "support@zip.tax"}
+    {name = "Ziptax Team", email = "support@zip.tax"}
 ]
 keywords = ["tax", "ziptax", "api", "sdk", "sales tax"]
 classifiers = [

@@ -1,8 +1,8 @@
-# ZipTax Python SDK
+# Ziptax Python SDK
 
-Official Python SDK for the [ZipTax API](https://zip-tax.com) - Get accurate sales and use tax rates for any US or Canadian address.
+Official Python SDK for the [Ziptax API](https://zip-tax.com) - Get accurate sales and use tax rates for any US or Canadian address.
 
-[![Python Version](https://img.shields.io/pypi/pyversions/ziptax)](https://pypi.org/project/ziptax/)
+[![Python Version](https://img.shields.io/pypi/pyversions/ziptax-sdk)](https://pypi.org/project/ziptax-sdk/)
 [![License](https://img.shields.io/github/license/ziptax/ziptax-python)](LICENSE)
 
 ## Features
@@ -19,16 +19,16 @@ Official Python SDK for the [ZipTax API](https://zip-tax.com) - Get accurate sal
 ## Installation
 
 ```bash
-pip install ziptax
+pip install ziptax-sdk
 ```
 
 ## Quick Start
 
 ```python
-from ziptax import ZipTaxClient
+from ziptax import ZiptaxClient
 
 # Initialize the client with your API key
-client = ZipTaxClient.api_key("your-api-key-here")
+client = ZiptaxClient.api_key("your-api-key-here")
 
 # Get sales tax by address
 response = client.request.GetSalesTaxByAddress(
@@ -49,13 +49,13 @@ client.close()
 ### Initialize the Client
 
 ```python
-from ziptax import ZipTaxClient
+from ziptax import ZiptaxClient
 
 # Basic initialization
-client = ZipTaxClient.api_key("your-api-key-here")
+client = ZiptaxClient.api_key("your-api-key-here")
 
 # With custom configuration
-client = ZipTaxClient.api_key(
+client = ZiptaxClient.api_key(
     "your-api-key-here",
     timeout=60,           # Request timeout in seconds
     max_retries=5,        # Maximum retry attempts
@@ -63,7 +63,7 @@ client = ZipTaxClient.api_key(
 )
 
 # Using as a context manager (recommended)
-with ZipTaxClient.api_key("your-api-key-here") as client:
+with ZiptaxClient.api_key("your-api-key-here") as client:
     response = client.request.GetSalesTaxByAddress("123 Main St")
 ```
 
@@ -132,7 +132,7 @@ print(f"Account Active: {metrics.is_active}")
 You can configure the client using dict-style access:
 
 ```python
-client = ZipTaxClient.api_key("your-api-key-here")
+client = ZiptaxClient.api_key("your-api-key-here")
 
 # Set configuration options
 client.config["format"] = "json"
@@ -180,8 +180,8 @@ except ZipTaxServerError as e:
     print(f"Server error: {e.message}")
 
 except ZipTaxError as e:
-    # General ZipTax errors
-    print(f"ZipTax error: {e.message}")
+    # General Ziptax errors
+    print(f"Ziptax error: {e.message}")
 ```
 
 ### Exception Hierarchy
@@ -343,7 +343,7 @@ See the [examples/](examples/) directory for complete examples:
 
 ### ZipTaxClient
 
-Main client for interacting with the ZipTax API.
+Main client for interacting with the Ziptax API.
 
 #### Methods
 
@@ -397,4 +397,4 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
 ---
 
-Made with ❤️ by the ZipTax Team
+Made with ❤️ by the Ziptax Team
