@@ -1,5 +1,5 @@
 # =============================================================================
-# SDK Generation Template for ZipTax API
+# SDK Generation Template for Ziptax API
 # =============================================================================
 # This template provides a comprehensive spec for codegen agents
 
@@ -7,10 +7,10 @@
 # Project Metadata
 # -----------------------------------------------------------------------------
 project:
-  name: "ziptax-python"
+  name: "ziptax-sdk"
   language: "python"
   version: "1.0.0"
-  description: "Official Python SDK for the ZipTax API"
+  description: "Official Python SDK for the Ziptax API"
 
   # Repository information
   repository:
@@ -22,7 +22,7 @@ project:
 
   # Maintainer information
   maintainers:
-    - name: "ZipTax Team"
+    - name: "Ziptax Team"
       email: "support@zip.tax"
 
 # -----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ project:
 # -----------------------------------------------------------------------------
 api:
   # Base API details
-  name: "ZipTax API"
+  name: "Ziptax API"
   version: "v60"
   base_url: "https://api.zip-tax.com/"
 
