@@ -25,7 +25,9 @@ print(f"Incorporated: {response.addressDetail.incorporated}")
 print(f"\nService Taxable: {response.service.taxable}")
 print(f"Shipping Taxable: {response.shipping.taxable}")
 if response.sourcing_rules:
-    print(f"Sourcing: {response.sourcing_rules.value} ({response.sourcing_rules.description})")
+    print(
+        f"Sourcing: {response.sourcing_rules.value} ({response.sourcing_rules.description})"
+    )
 
 if response.tax_summaries:
     print(f"\nTax Summaries:")
@@ -68,9 +70,35 @@ if response.tax_summaries:
     for summary in response.tax_summaries:
         print(f"{summary.summary_name}: {summary.rate * 100:.2f}%")
 
-# Example 4: Get account metrics
+# Example 4: Get sales tax by postal code
 print("\n" + "=" * 60)
-print("Example 4: Get Account Metrics")
+print("Example 4: Get Sales Tax by Postal Code")
+print("=" * 60)
+
+response = client.request.GetRatesByPostalCode("92694")
+
+print(f"Postal Code: {response.results[0].geo_postal_code}")
+print(f"API Version: {response.version}")
+print(f"Response Code: {response.r_code}")
+print(f"\nFound {len(response.results)} location(s) for this postal code:\n")
+
+for result in response.results:
+    print(f"Location: {result.geo_city}, {result.geo_state} {result.geo_postal_code}")
+    print(f"  County: {result.geo_county}")
+    print(f"  Total Sales Tax: {result.tax_sales * 100:.2f}%")
+    print(f"  Total Use Tax: {result.tax_use * 100:.2f}%")
+    print(f"  Service Taxable: {result.txb_service}")
+    print(f"  Freight Taxable: {result.txb_freight}")
+    print(f"  Sourcing: {result.origin_destination}")
+    print(f"  State Sales Tax: {result.state_sales_tax * 100:.2f}%")
+    print(f"  County Sales Tax: {result.county_sales_tax * 100:.2f}%")
+    print(f"  City Sales Tax: {result.city_sales_tax * 100:.2f}%")
+    print(f"  District Sales Tax: {result.district_sales_tax * 100:.2f}%")
+    print()
+
+# Example 5: Get account metrics
+print("=" * 60)
+print("Example 5: Get Account Metrics")
 print("=" * 60)
 
 metrics = client.request.GetAccountMetrics()
@@ -90,7 +118,7 @@ client.close()
 
 # Alternatively, use as a context manager
 print("\n" + "=" * 60)
-print("Example 5: Using Context Manager")
+print("Example 6: Using Context Manager")
 print("=" * 60)
 
 with ZipTaxClient.api_key("your-api-key-here") as client:

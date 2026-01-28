@@ -140,3 +140,28 @@ def validate_api_key(api_key: str) -> None:
 
     if len(api_key) < 10:
         raise ZipTaxValidationError("API key appears to be invalid (too short)")
+
+
+def validate_postal_code(postal_code: str) -> None:
+    """Validate US postal code parameter.
+
+    Args:
+        postal_code: Postal code string to validate (5-digit or 9-digit format)
+
+    Raises:
+        ZipTaxValidationError: If postal code is invalid
+    """
+    if not postal_code:
+        raise ZipTaxValidationError("Postal code cannot be empty")
+
+    if not isinstance(postal_code, str):
+        raise ZipTaxValidationError("Postal code must be a string")
+
+    # Pattern for 5-digit or 5+4 digit format
+    pattern = r"^[0-9]{5}(-[0-9]{4})?$"
+
+    if not re.match(pattern, postal_code):
+        raise ZipTaxValidationError(
+            f"Postal code must be in 5-digit (e.g., 92694) or "
+            f"9-digit (e.g., 92694-1234) format, got: {postal_code}"
+        )
