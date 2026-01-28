@@ -197,3 +197,138 @@ class V60AccountMetrics(BaseModel):
     )
     is_active: bool = Field(..., description="Whether the account is currently active")
     message: str = Field(..., description="Account status or informational message")
+
+
+class V60PostalCodeResult(BaseModel):
+    """Individual tax rate result for a postal code location."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    geo_postal_code: str = Field(..., alias="geoPostalCode", description="Postal code")
+    geo_city: str = Field(..., alias="geoCity", description="City name")
+    geo_county: str = Field(..., alias="geoCounty", description="County name")
+    geo_state: str = Field(..., alias="geoState", description="State code")
+    tax_sales: float = Field(..., alias="taxSales", description="Total sales tax rate")
+    tax_use: float = Field(..., alias="taxUse", description="Total use tax rate")
+    txb_service: Literal["Y", "N"] = Field(
+        ..., alias="txbService", description="Service taxability indicator"
+    )
+    txb_freight: Literal["Y", "N"] = Field(
+        ..., alias="txbFreight", description="Freight taxability indicator"
+    )
+    state_sales_tax: float = Field(
+        ..., alias="stateSalesTax", description="State sales tax rate"
+    )
+    state_use_tax: float = Field(
+        ..., alias="stateUseTax", description="State use tax rate"
+    )
+    city_sales_tax: float = Field(
+        ..., alias="citySalesTax", description="City sales tax rate"
+    )
+    city_use_tax: float = Field(
+        ..., alias="cityUseTax", description="City use tax rate"
+    )
+    city_tax_code: str = Field(..., alias="cityTaxCode", description="City tax code")
+    county_sales_tax: float = Field(
+        ..., alias="countySalesTax", description="County sales tax rate"
+    )
+    county_use_tax: float = Field(
+        ..., alias="countyUseTax", description="County use tax rate"
+    )
+    county_tax_code: str = Field(
+        ..., alias="countyTaxCode", description="County tax code"
+    )
+    district_sales_tax: float = Field(
+        ..., alias="districtSalesTax", description="Total district sales tax rate"
+    )
+    district_use_tax: float = Field(
+        ..., alias="districtUseTax", description="Total district use tax rate"
+    )
+    district1_code: str = Field(
+        ..., alias="district1Code", description="District 1 tax code"
+    )
+    district1_sales_tax: float = Field(
+        ..., alias="district1SalesTax", description="District 1 sales tax rate"
+    )
+    district1_use_tax: float = Field(
+        ..., alias="district1UseTax", description="District 1 use tax rate"
+    )
+    district2_code: str = Field(
+        ..., alias="district2Code", description="District 2 tax code"
+    )
+    district2_sales_tax: float = Field(
+        ..., alias="district2SalesTax", description="District 2 sales tax rate"
+    )
+    district2_use_tax: float = Field(
+        ..., alias="district2UseTax", description="District 2 use tax rate"
+    )
+    district3_code: str = Field(
+        ..., alias="district3Code", description="District 3 tax code"
+    )
+    district3_sales_tax: float = Field(
+        ..., alias="district3SalesTax", description="District 3 sales tax rate"
+    )
+    district3_use_tax: float = Field(
+        ..., alias="district3UseTax", description="District 3 use tax rate"
+    )
+    district4_code: str = Field(
+        ..., alias="district4Code", description="District 4 tax code"
+    )
+    district4_sales_tax: float = Field(
+        ..., alias="district4SalesTax", description="District 4 sales tax rate"
+    )
+    district4_use_tax: float = Field(
+        ..., alias="district4UseTax", description="District 4 use tax rate"
+    )
+    district5_code: str = Field(
+        ..., alias="district5Code", description="District 5 tax code"
+    )
+    district5_sales_tax: float = Field(
+        ..., alias="district5SalesTax", description="District 5 sales tax rate"
+    )
+    district5_use_tax: float = Field(
+        ..., alias="district5UseTax", description="District 5 use tax rate"
+    )
+    origin_destination: Literal["O", "D"] = Field(
+        ..., alias="originDestination", description="Origin/destination indicator"
+    )
+
+
+class V60PostalCodeAddressDetail(BaseModel):
+    """Address details for postal code lookup."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    normalized_address: str = Field(
+        ...,
+        alias="normalizedAddress",
+        description="Normalized address (not available for postal code lookups)",
+    )
+    incorporated: str = Field(
+        ...,
+        description="Incorporation status (not available for postal code lookups)",
+    )
+    geo_lat: float = Field(
+        ..., alias="geoLat", description="Latitude (0 for postal code lookups)"
+    )
+    geo_lng: float = Field(
+        ..., alias="geoLng", description="Longitude (0 for postal code lookups)"
+    )
+
+
+class V60PostalCodeResponse(BaseModel):
+    """Response for postal code lookup.
+
+    Returns flat structure with multiple results.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    version: str = Field(..., description="API version")
+    r_code: int = Field(..., alias="rCode", description="Response code (100=success)")
+    results: List[V60PostalCodeResult] = Field(
+        ..., description="Array of tax rate results for the postal code"
+    )
+    address_detail: V60PostalCodeAddressDetail = Field(
+        ..., alias="addressDetail", description="Address details for postal code lookup"
+    )

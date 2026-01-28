@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from ..models import V60AccountMetrics, V60Response
+from ..models import V60AccountMetrics, V60PostalCodeResponse, V60Response
 from ..utils.http import HTTPClient
 from ..utils.retry import retry_with_backoff
 from ..utils.validation import (
@@ -12,6 +12,7 @@ from ..utils.validation import (
     validate_country_code,
     validate_format,
     validate_historical_date,
+    validate_postal_code,
 )
 
 logger = logging.getLogger(__name__)
@@ -169,3 +170,44 @@ class Functions:
 
         response_data = _make_request()
         return V60AccountMetrics(**response_data)
+
+    def GetRatesByPostalCode(
+        self,
+        postal_code: str,
+        format: str = "json",
+    ) -> V60PostalCodeResponse:
+        """Get sales tax rates by US postal code.
+
+        Args:
+            postal_code: US postal code (5-digit or 9-digit format,
+                e.g., "92694" or "92694-1234")
+            format: Response format (default: "json")
+
+        Returns:
+            V60PostalCodeResponse object with tax rate information for all locations
+            within the postal code
+
+        Raises:
+            ZipTaxValidationError: If input parameters are invalid
+            ZipTaxAPIError: If the API returns an error
+        """
+        # Validate inputs
+        validate_postal_code(postal_code)
+        validate_format(format)
+
+        # Build query parameters
+        params: Dict[str, Any] = {
+            "postalcode": postal_code,
+            "format": format,
+        }
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            return self.http_client.get("/request/v60/", params=params)
+
+        response_data = _make_request()
+        return V60PostalCodeResponse(**response_data)

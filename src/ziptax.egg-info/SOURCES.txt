@@ -21,3 +21,5 @@ src/ziptax/utils/retry.py
 src/ziptax/utils/validation.py
 tests/test_client.py
 tests/test_functions.py
+tests/test_http.py
+tests/test_retry.py
