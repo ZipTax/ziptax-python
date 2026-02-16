@@ -147,11 +147,20 @@ class Config:
         Returns:
             Dictionary representation of config
         """
-        return {
+        result: Dict[str, Any] = {
             "api_key": "***",  # Mask API key
             "base_url": self._base_url,
             "timeout": self._timeout,
             "max_retries": self._max_retries,
             "retry_delay": self._retry_delay,
-            **self._extra,
         }
+
+        if self._taxcloud_connection_id:
+            result["taxcloud_connection_id"] = self._taxcloud_connection_id
+        if self._taxcloud_api_key:
+            result["taxcloud_api_key"] = "***"  # Mask TaxCloud API key
+        if self._taxcloud_base_url != "https://api.v3.taxcloud.com":
+            result["taxcloud_base_url"] = self._taxcloud_base_url
+
+        result.update(self._extra)
+        return result

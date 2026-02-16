@@ -14,14 +14,14 @@ def validate_address(address: str) -> None:
     Raises:
         ZipTaxValidationError: If address is invalid
     """
+    if not isinstance(address, str):
+        raise ZipTaxValidationError("Address must be a string")
+
     if not address:
         raise ZipTaxValidationError("Address cannot be empty")
 
     if len(address) > 100:
         raise ZipTaxValidationError("Address cannot exceed 100 characters")
-
-    if not isinstance(address, str):
-        raise ZipTaxValidationError("Address must be a string")
 
 
 def validate_coordinates(lat: str, lng: str) -> None:
@@ -115,7 +115,7 @@ def validate_format(format_str: str) -> None:
     Raises:
         ZipTaxValidationError: If format is invalid
     """
-    valid_formats = ["json", "xml"]
+    valid_formats = ["json"]
 
     if format_str not in valid_formats:
         raise ZipTaxValidationError(

@@ -1,7 +1,7 @@
 """Response models for the ZipTax API."""
 
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -82,7 +82,7 @@ class V60Service(BaseModel):
     adjustment_type: str = Field(
         ..., alias="adjustmentType", description="Service adjustment type"
     )
-    taxable: Literal["Y", "N"] = Field(..., description="Taxability indicator")
+    taxable: str = Field(..., description="Taxability indicator")
     description: str = Field(..., description="Service description")
 
 
@@ -94,7 +94,7 @@ class V60Shipping(BaseModel):
     adjustment_type: str = Field(
         ..., alias="adjustmentType", description="Shipping adjustment type"
     )
-    taxable: Literal["Y", "N"] = Field(..., description="Taxability indicator")
+    taxable: str = Field(..., description="Taxability indicator")
     description: str = Field(..., description="Shipping description")
 
 
@@ -107,9 +107,7 @@ class V60SourcingRules(BaseModel):
         ..., alias="adjustmentType", description="Sourcing rule type"
     )
     description: str = Field(..., description="Sourcing rule description")
-    value: Literal["O", "D"] = Field(
-        ..., description="Origin (O) or Destination (D) based"
-    )
+    value: str = Field(..., description="Origin (O) or Destination (D) based")
 
 
 class V60DisplayRate(BaseModel):
@@ -141,12 +139,12 @@ class V60AddressDetail(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    normalizedAddress: str = Field(..., description="Normalized address")
-    incorporated: Literal["true", "false"] = Field(
-        ..., description="Incorporation status"
+    normalized_address: str = Field(
+        ..., alias="normalizedAddress", description="Normalized address"
     )
-    geoLat: float = Field(..., description="Geocoded latitude")
-    geoLng: float = Field(..., description="Geocoded longitude")
+    incorporated: str = Field(..., description="Incorporation status")
+    geo_lat: float = Field(..., alias="geoLat", description="Geocoded latitude")
+    geo_lng: float = Field(..., alias="geoLng", description="Geocoded longitude")
 
 
 class V60Response(BaseModel):
@@ -158,8 +156,12 @@ class V60Response(BaseModel):
     base_rates: Optional[List[V60BaseRate]] = Field(
         None, alias="baseRates", description="Base tax rates by jurisdiction"
     )
-    service: V60Service = Field(..., description="Service taxability information")
-    shipping: V60Shipping = Field(..., description="Shipping taxability information")
+    service: Optional[V60Service] = Field(
+        None, description="Service taxability information"
+    )
+    shipping: Optional[V60Shipping] = Field(
+        None, description="Shipping taxability information"
+    )
     sourcing_rules: Optional[V60SourcingRules] = Field(
         None,
         alias="sourcingRules",
@@ -168,7 +170,9 @@ class V60Response(BaseModel):
     tax_summaries: Optional[List[V60TaxSummary]] = Field(
         None, alias="taxSummaries", description="Tax rate summaries"
     )
-    addressDetail: V60AddressDetail = Field(..., description="Address details")
+    address_detail: V60AddressDetail = Field(
+        ..., alias="addressDetail", description="Address details"
+    )
 
 
 class V60AccountMetrics(BaseModel):
@@ -210,10 +214,10 @@ class V60PostalCodeResult(BaseModel):
     geo_state: str = Field(..., alias="geoState", description="State code")
     tax_sales: float = Field(..., alias="taxSales", description="Total sales tax rate")
     tax_use: float = Field(..., alias="taxUse", description="Total use tax rate")
-    txb_service: Literal["Y", "N"] = Field(
+    txb_service: str = Field(
         ..., alias="txbService", description="Service taxability indicator"
     )
-    txb_freight: Literal["Y", "N"] = Field(
+    txb_freight: str = Field(
         ..., alias="txbFreight", description="Freight taxability indicator"
     )
     state_sales_tax: float = Field(
@@ -289,7 +293,7 @@ class V60PostalCodeResult(BaseModel):
     district5_use_tax: float = Field(
         ..., alias="district5UseTax", description="District 5 use tax rate"
     )
-    origin_destination: Literal["O", "D"] = Field(
+    origin_destination: str = Field(
         ..., alias="originDestination", description="Origin/destination indicator"
     )
 

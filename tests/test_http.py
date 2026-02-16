@@ -272,3 +272,179 @@ def test_close(http_client):
     with patch.object(http_client.session, "close") as mock_close:
         http_client.close()
         mock_close.assert_called_once()
+
+
+# =============================================================================
+# POST method tests
+# =============================================================================
+
+
+def test_post_success(http_client):
+    """Test successful POST request."""
+    mock_response = Mock()
+    mock_response.ok = True
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"orderId": "test-1"}
+
+    with patch.object(http_client.session, "post", return_value=mock_response):
+        result = http_client.post("/test", json={"key": "value"})
+
+    assert result == {"orderId": "test-1"}
+
+
+def test_post_with_params(http_client):
+    """Test POST request with query parameters."""
+    mock_response = Mock()
+    mock_response.ok = True
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": "test"}
+
+    with patch.object(
+        http_client.session, "post", return_value=mock_response
+    ) as mock_post:
+        result = http_client.post(
+            "/test", json={"body": "data"}, params={"param1": "value1"}
+        )
+
+    assert result == {"data": "test"}
+    mock_post.assert_called_once()
+
+
+def test_post_authentication_error(http_client):
+    """Test POST request with 401 authentication error."""
+    mock_response = Mock()
+    mock_response.ok = False
+    mock_response.status_code = 401
+    mock_response.text = "Unauthorized"
+    mock_response.json.return_value = {"message": "Invalid API key"}
+
+    with patch.object(http_client.session, "post", return_value=mock_response):
+        with pytest.raises(ZipTaxAuthenticationError) as exc_info:
+            http_client.post("/test", json={})
+
+    assert exc_info.value.status_code == 401
+
+
+def test_post_server_error(http_client):
+    """Test POST request with 500 server error."""
+    mock_response = Mock()
+    mock_response.ok = False
+    mock_response.status_code = 500
+    mock_response.text = "Internal Server Error"
+    mock_response.json.return_value = {"message": "Server error"}
+
+    with patch.object(http_client.session, "post", return_value=mock_response):
+        with pytest.raises(ZipTaxServerError) as exc_info:
+            http_client.post("/test", json={})
+
+    assert exc_info.value.status_code == 500
+
+
+def test_post_timeout_error(http_client):
+    """Test POST request with timeout error."""
+    with patch.object(
+        http_client.session,
+        "post",
+        side_effect=requests.exceptions.Timeout("Timeout"),
+    ):
+        with pytest.raises(ZipTaxTimeoutError):
+            http_client.post("/test", json={})
+
+
+def test_post_connection_error(http_client):
+    """Test POST request with connection error."""
+    with patch.object(
+        http_client.session,
+        "post",
+        side_effect=requests.exceptions.ConnectionError("Connection failed"),
+    ):
+        with pytest.raises(ZipTaxConnectionError):
+            http_client.post("/test", json={})
+
+
+# =============================================================================
+# PATCH method tests
+# =============================================================================
+
+
+def test_patch_success(http_client):
+    """Test successful PATCH request."""
+    mock_response = Mock()
+    mock_response.ok = True
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"orderId": "test-1", "updated": True}
+
+    with patch.object(http_client.session, "patch", return_value=mock_response):
+        result = http_client.patch("/test", json={"completedDate": "2024-01"})
+
+    assert result == {"orderId": "test-1", "updated": True}
+
+
+def test_patch_with_params(http_client):
+    """Test PATCH request with query parameters."""
+    mock_response = Mock()
+    mock_response.ok = True
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": "test"}
+
+    with patch.object(
+        http_client.session, "patch", return_value=mock_response
+    ) as mock_patch:
+        result = http_client.patch(
+            "/test", json={"body": "data"}, params={"param1": "value1"}
+        )
+
+    assert result == {"data": "test"}
+    mock_patch.assert_called_once()
+
+
+def test_patch_not_found_error(http_client):
+    """Test PATCH request with 404 not found error."""
+    mock_response = Mock()
+    mock_response.ok = False
+    mock_response.status_code = 404
+    mock_response.text = "Not Found"
+    mock_response.json.return_value = {"message": "Order not found"}
+
+    with patch.object(http_client.session, "patch", return_value=mock_response):
+        with pytest.raises(ZipTaxNotFoundError) as exc_info:
+            http_client.patch("/test", json={})
+
+    assert exc_info.value.status_code == 404
+
+
+def test_patch_server_error(http_client):
+    """Test PATCH request with 500 server error."""
+    mock_response = Mock()
+    mock_response.ok = False
+    mock_response.status_code = 500
+    mock_response.text = "Internal Server Error"
+    mock_response.json.return_value = {"message": "Server error"}
+
+    with patch.object(http_client.session, "patch", return_value=mock_response):
+        with pytest.raises(ZipTaxServerError) as exc_info:
+            http_client.patch("/test", json={})
+
+    assert exc_info.value.status_code == 500
+
+
+def test_patch_timeout_error(http_client):
+    """Test PATCH request with timeout error."""
+    with patch.object(
+        http_client.session,
+        "patch",
+        side_effect=requests.exceptions.Timeout("Timeout"),
+    ):
+        with pytest.raises(ZipTaxTimeoutError):
+            http_client.patch("/test", json={})
+
+
+def test_patch_connection_error(http_client):
+    """Test PATCH request with connection error."""
+    with patch.object(
+        http_client.session,
+        "patch",
+        side_effect=requests.exceptions.ConnectionError("Connection failed"),
+    ):
+        with pytest.raises(ZipTaxConnectionError):
+            http_client.patch("/test", json={})
