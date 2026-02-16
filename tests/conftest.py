@@ -127,15 +127,11 @@ def sample_v60_response():
 
 @pytest.fixture
 def sample_account_metrics():
-    """Sample V60AccountMetrics data for testing."""
+    """Sample V60AccountMetrics data for testing (matches live API format)."""
     return {
-        "core_request_count": 15595,
-        "core_request_limit": 1000000,
-        "core_usage_percent": 1.5595,
-        "geo_enabled": True,
-        "geo_request_count": 43891,
-        "geo_request_limit": 1000000,
-        "geo_usage_percent": 4.3891,
+        "request_count": 15595,
+        "request_limit": 1000000,
+        "usage_percent": 1.5595,
         "is_active": True,
         "message": "Contact support@zip.tax to modify your account",
     }

@@ -17,20 +17,29 @@ The Python SDK normalizes these to **snake_case** for Pythonic code while mainta
 |---------------------|-----------------------|-------------------------|----------|
 | `metadata`          | `metadata`            | V60Metadata             | Yes      |
 | `baseRates`         | `base_rates`          | List[V60BaseRate]       | No       |
-| `service`           | `service`             | V60Service              | Yes      |
-| `shipping`          | `shipping`            | V60Shipping             | Yes      |
-| `originDestination` | `origin_destination`  | V60OriginDestination    | No       |
+| `service`           | `service`             | V60Service              | No       |
+| `shipping`          | `shipping`            | V60Shipping             | No       |
+| `sourcingRules`     | `sourcing_rules`      | V60SourcingRules        | No       |
 | `taxSummaries`      | `tax_summaries`       | List[V60TaxSummary]     | No       |
-| `addressDetail`     | `addressDetail`       | V60AddressDetail        | Yes      |
+| `addressDetail`     | `address_detail`      | V60AddressDetail        | Yes      |
+
+**Note:** `service` and `shipping` are Optional because some jurisdictions (e.g., Canada) may not include them.
 
 ## V60Metadata
 
+| API Field      | Python Property   | Type            | Required |
+|----------------|-------------------|-----------------|----------|
+| `version`      | `version`         | str             | Yes      |
+| `response`     | `response`        | V60ResponseInfo | Yes      |
+
+## V60ResponseInfo
+
 | API Field      | Python Property   | Type | Required |
 |----------------|-------------------|------|----------|
-| `version`      | `version`         | str  | Yes      |
-| `rCode`        | `response_code`   | int  | Yes      |
-
-**Note:** The API returns `rCode` (not `responseCode`).
+| `code`         | `code`            | int  | Yes      |
+| `name`         | `name`            | str  | Yes      |
+| `message`      | `message`         | str  | Yes      |
+| `definition`   | `definition`      | str  | Yes      |
 
 ## V60BaseRate
 
@@ -61,15 +70,15 @@ The Python SDK normalizes these to **snake_case** for Pythonic code while mainta
 | `taxable`        | `taxable`          | "Y" or "N"        | Yes      |
 | `description`    | `description`      | str               | Yes      |
 
-## V60OriginDestination
+## V60SourcingRules
 
 | API Field        | Python Property    | Type              | Required |
 |------------------|--------------------|-------------------|----------|
 | `adjustmentType` | `adjustment_type`  | str               | Yes      |
 | `description`    | `description`      | str               | Yes      |
-| `value`          | `value`            | "O" or "D"        | Yes      |
+| `value`          | `value`            | str               | Yes      |
 
-**Note:** This entire object may not be present in all responses.
+**Note:** This entire object may not be present in all responses. `value` is typically "O" (origin) or "D" (destination).
 
 ## V60TaxSummary
 
@@ -83,28 +92,24 @@ The Python SDK normalizes these to **snake_case** for Pythonic code while mainta
 
 | API Field           | Python Property       | Type              | Required |
 |---------------------|-----------------------|-------------------|----------|
-| `normalizedAddress` | `normalizedAddress`   | str               | Yes      |
-| `incorporated`      | `incorporated`        | "true" or "false" | Yes      |
-| `geoLat`            | `geoLat`              | float             | Yes      |
-| `geoLng`            | `geoLng`              | float             | Yes      |
+| `normalizedAddress` | `normalized_address`  | str               | Yes      |
+| `incorporated`      | `incorporated`        | str               | Yes      |
+| `geoLat`            | `geo_lat`             | float             | Yes      |
+| `geoLng`            | `geo_lng`             | float             | Yes      |
 
-**Note:** These fields keep their camelCase names in Python for consistency with the API.
+**Note:** `incorporated` is typically "true" or "false" but typed as `str` for flexibility.
 
 ## V60AccountMetrics
 
 | API Field             | Python Property         | Type  | Required |
 |-----------------------|-------------------------|-------|----------|
-| `core_request_count`  | `core_request_count`    | int   | Yes      |
-| `core_request_limit`  | `core_request_limit`    | int   | Yes      |
-| `core_usage_percent`  | `core_usage_percent`    | float | Yes      |
-| `geo_enabled`         | `geo_enabled`           | bool  | Yes      |
-| `geo_request_count`   | `geo_request_count`     | int   | Yes      |
-| `geo_request_limit`   | `geo_request_limit`     | int   | Yes      |
-| `geo_usage_percent`   | `geo_usage_percent`     | float | Yes      |
+| `request_count`       | `request_count`         | int   | Yes      |
+| `request_limit`       | `request_limit`         | int   | Yes      |
+| `usage_percent`       | `usage_percent`         | float | Yes      |
 | `is_active`           | `is_active`             | bool  | Yes      |
 | `message`             | `message`               | str   | Yes      |
 
-**Note:** Account metrics API uses snake_case directly.
+**Note:** Account metrics API uses snake_case directly. The model uses `extra="allow"` to accept any additional fields the API may return.
 
 ## Example Usage
 
@@ -114,11 +119,14 @@ from ziptax import ZipTaxClient
 client = ZipTaxClient.api_key('your-api-key')
 response = client.request.GetSalesTaxByAddress("200 Spectrum Center Drive, Irvine, CA 92618")
 
-# Python uses snake_case properties
-print(response.metadata.response_code)  # Accessing rCode from API
+# Response metadata
+print(response.metadata.response.code)     # 100
+print(response.metadata.response.message)  # "Successful API Request."
 
-# Some fields keep their original names
-print(response.addressDetail.normalizedAddress)
+# Address details use snake_case
+print(response.address_detail.normalized_address)
+print(response.address_detail.geo_lat)
+print(response.address_detail.geo_lng)
 
 # Iterate through base rates
 if response.base_rates:
@@ -132,12 +140,12 @@ The SDK accepts both naming conventions thanks to `populate_by_name=True`:
 
 ```python
 # Both work:
-response.metadata.response_code  # Pythonic (recommended)
-response.metadata.rCode          # API format (also works)
-
-# Both work:
 response.base_rates              # Pythonic (recommended)
 response.baseRates               # API format (also works)
+
+# Both work:
+response.address_detail          # Pythonic (recommended)
+response.addressDetail           # API format (also works)
 ```
 
 This flexibility ensures compatibility while encouraging Pythonic naming.

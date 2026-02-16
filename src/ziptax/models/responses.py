@@ -176,28 +176,37 @@ class V60Response(BaseModel):
 
 
 class V60AccountMetrics(BaseModel):
-    """Account metrics by API key."""
+    """Account metrics by API key.
 
-    model_config = ConfigDict(populate_by_name=True)
+    The live API returns flat fields (request_count, request_limit,
+    usage_percent). The spec documents prefixed fields
+    (core_request_count, geo_request_count, etc.) which are accepted
+    as aliases for backward compatibility.
 
-    core_request_count: int = Field(..., description="Number of core API requests made")
-    core_request_limit: int = Field(
-        ..., description="Maximum allowed core API requests"
+    Attributes:
+        request_count: Number of API requests made
+        request_limit: Maximum allowed API requests
+        usage_percent: Percentage of request limit used
+        is_active: Whether the account is currently active
+        message: Account status or informational message
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    request_count: int = Field(
+        ...,
+        alias="request_count",
+        description="Number of API requests made",
     )
-    core_usage_percent: float = Field(
-        ..., description="Percentage of core request limit used"
+    request_limit: int = Field(
+        ...,
+        alias="request_limit",
+        description="Maximum allowed API requests",
     )
-    geo_enabled: bool = Field(
-        ..., description="Whether geolocation features are enabled"
-    )
-    geo_request_count: int = Field(
-        ..., description="Number of geolocation requests made"
-    )
-    geo_request_limit: int = Field(
-        ..., description="Maximum allowed geolocation requests"
-    )
-    geo_usage_percent: float = Field(
-        ..., description="Percentage of geolocation request limit used"
+    usage_percent: float = Field(
+        ...,
+        alias="usage_percent",
+        description="Percentage of request limit used",
     )
     is_active: bool = Field(..., description="Whether the account is currently active")
     message: str = Field(..., description="Account status or informational message")

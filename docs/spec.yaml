@@ -155,13 +155,14 @@ resources:
             description: "Historical date for rates (YYYY-MM format)"
             validation:
               pattern: "^[0-9]{4}-[0-9]{2}$"
+            notes: "KNOWN ISSUE: The live API may reject YYYY-MM format. Contact support@zip.tax to confirm the accepted format."
           - name: "format"
             type: "string"
             required: false
             location: "query"
             description: "Response format"
             default: "json"
-            enum: ["json", "xml"]
+            enum: ["json"]
         returns:
           type: "V60Response"
           is_array: false
@@ -200,13 +201,14 @@ resources:
             description: "Historical date for rates (YYYY-MM format)"
             validation:
               pattern: "^[0-9]{4}-[0-9]{2}$"
+            notes: "KNOWN ISSUE: The live API may reject YYYY-MM format. Contact support@zip.tax to confirm the accepted format."
           - name: "format"
             type: "string"
             required: false
             location: "query"
             description: "Response format"
             default: "json"
-            enum: ["json", "xml"]
+            enum: ["json"]
         returns:
           type: "V60Response"
           is_array: false
@@ -641,41 +643,23 @@ models:
         description: "Geocoded longitude"
   - name: "V60AccountMetrics"
     description: "Account metrics by API key"
+    notes: "Uses extra='allow' to accept additional fields the API may return."
     properties:
-      - name: "core_request_count"
+      - name: "request_count"
         type: "integer"
         format: "int64"
         required: true
-        description: "Number of core API requests made"
-      - name: "core_request_limit"
+        description: "Number of API requests made"
+      - name: "request_limit"
         type: "integer"
         format: "int64"
         required: true
-        description: "Maximum allowed core API requests"
-      - name: "core_usage_percent"
+        description: "Maximum allowed API requests"
+      - name: "usage_percent"
         type: "number"
         format: "float"
         required: true
-        description: "Percentage of core request limit used"
-      - name: "geo_enabled"
-        type: "boolean"
-        required: true
-        description: "Whether geolocation features are enabled"
-      - name: "geo_request_count"
-        type: "integer"
-        format: "int64"
-        required: true
-        description: "Number of geolocation requests made"
-      - name: "geo_request_limit"
-        type: "integer"
-        format: "int64"
-        required: true
-        description: "Maximum allowed geolocation requests"
-      - name: "geo_usage_percent"
-        type: "number"
-        format: "float"
-        required: true
-        description: "Percentage of geolocation request limit used"
+        description: "Percentage of request limit used"
       - name: "is_active"
         type: "boolean"
         required: true
@@ -1747,17 +1731,13 @@ actual_api_responses:
       }
 
   v60_account_metrics:
-    description: "Actual V60AccountMetrics response"
+    description: "Actual V60AccountMetrics response from live API"
     endpoint: "GET /account/v60/metrics"
     example: |
       {
-        "core_request_count": 15595,
-        "core_request_limit": 1000000,
-        "core_usage_percent": 1.5595,
-        "geo_enabled": true,
-        "geo_request_count": 43891,
-        "geo_request_limit": 1000000,
-        "geo_usage_percent": 4.3891,
+        "request_count": 15595,
+        "request_limit": 1000000,
+        "usage_percent": 1.5595,
         "is_active": true,
         "message": "Contact support@zip.tax to modify your account"
       }

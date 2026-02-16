@@ -42,7 +42,7 @@ response = client.request.GetSalesTaxByAddress(
     "200 Spectrum Center Drive, Irvine, CA 92618"
 )
 
-print(f"Address: {response.addressDetail.normalizedAddress}")
+print(f"Address: {response.address_detail.normalized_address}")
 if response.tax_summaries:
     for summary in response.tax_summaries:
         print(f"{summary.summary_name}: {summary.rate * 100:.2f}%")
@@ -81,13 +81,13 @@ response = client.request.GetSalesTaxByAddress(
     address="200 Spectrum Center Drive, Irvine, CA 92618",
     country_code="USA",      # Optional: "USA" or "CAN" (default: "USA")
     historical="2024-01",    # Optional: Historical date (YYYY-MM format)
-    format="json",           # Optional: "json" or "xml" (default: "json")
+    format="json",           # Optional: Response format (default: "json")
 )
 
 # Access response data
-print(response.addressDetail.normalizedAddress)
-print(response.addressDetail.geoLat)
-print(response.addressDetail.geoLng)
+print(response.address_detail.normalized_address)
+print(response.address_detail.geo_lat)
+print(response.address_detail.geo_lng)
 
 # Response code
 print(f"Response: {response.metadata.response.code} - {response.metadata.response.message}")
@@ -119,7 +119,7 @@ response = client.request.GetSalesTaxByGeoLocation(
     format="json",
 )
 
-print(response.addressDetail.normalizedAddress)
+print(response.address_detail.normalized_address)
 ```
 
 ### Get Rates by Postal Code
@@ -142,11 +142,10 @@ for result in response.results:
 ```python
 metrics = client.request.GetAccountMetrics()
 
-print(f"Core Requests: {metrics.core_request_count:,} / {metrics.core_request_limit:,}")
-print(f"Core Usage: {metrics.core_usage_percent:.2f}%")
-print(f"Geo Requests: {metrics.geo_request_count:,} / {metrics.geo_request_limit:,}")
-print(f"Geo Usage: {metrics.geo_usage_percent:.2f}%")
+print(f"Requests: {metrics.request_count:,} / {metrics.request_limit:,}")
+print(f"Usage: {metrics.usage_percent:.2f}%")
 print(f"Account Active: {metrics.is_active}")
+print(f"Message: {metrics.message}")
 ```
 
 ## TaxCloud Order Management
@@ -399,11 +398,11 @@ All API responses are validated using Pydantic models:
 class V60Response:
     metadata: V60Metadata                           # Response metadata with code/message
     base_rates: Optional[List[V60BaseRate]]        # Tax rates by jurisdiction
-    service: V60Service                             # Service taxability
-    shipping: V60Shipping                           # Shipping taxability
+    service: Optional[V60Service]                   # Service taxability (None for some regions)
+    shipping: Optional[V60Shipping]                 # Shipping taxability (None for some regions)
     sourcing_rules: Optional[V60SourcingRules]     # Origin/Destination rules
     tax_summaries: Optional[List[V60TaxSummary]]   # Tax summaries with display rates
-    addressDetail: V60AddressDetail                 # Address details
+    address_detail: V60AddressDetail                # Address details
 ```
 
 ### V60Metadata
@@ -438,16 +437,14 @@ class V60DisplayRate:
 
 ```python
 class V60AccountMetrics:
-    core_request_count: int
-    core_request_limit: int
-    core_usage_percent: float
-    geo_enabled: bool
-    geo_request_count: int
-    geo_request_limit: int
-    geo_usage_percent: float
-    is_active: bool
-    message: str
+    request_count: int       # Number of API requests made
+    request_limit: int       # Maximum allowed API requests
+    usage_percent: float     # Percentage of request limit used
+    is_active: bool          # Whether the account is currently active
+    message: str             # Account status or informational message
 ```
+
+**Note:** Uses `extra="allow"` to accept any additional fields the API may return.
 
 See the [models documentation](src/ziptax/models/responses.py) for complete model definitions.
 

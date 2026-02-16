@@ -80,6 +80,11 @@ def validate_historical_date(historical: str) -> None:
 
     Raises:
         ZipTaxValidationError: If historical date is invalid
+
+    Note:
+        The spec documents YYYY-MM format. If the API rejects this format,
+        please contact the ZipTax API team (support@zip.tax) to confirm
+        the accepted format for the historical parameter.
     """
     pattern = r"^[0-9]{4}-[0-9]{2}$"
 

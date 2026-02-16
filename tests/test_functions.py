@@ -171,8 +171,7 @@ class TestGetAccountMetrics:
         response = functions.GetAccountMetrics()
 
         assert isinstance(response, V60AccountMetrics)
-        assert response.core_request_count == 15595
-        assert response.geo_enabled is True
+        assert response.request_count == 15595
         assert response.is_active is True
         mock_http_client.get.assert_called_once()
 
@@ -198,13 +197,9 @@ class TestGetAccountMetrics:
 
         response = functions.GetAccountMetrics()
 
-        assert response.core_request_count == 15595
-        assert response.core_request_limit == 1000000
-        assert response.core_usage_percent == 1.5595
-        assert response.geo_enabled is True
-        assert response.geo_request_count == 43891
-        assert response.geo_request_limit == 1000000
-        assert response.geo_usage_percent == 4.3891
+        assert response.request_count == 15595
+        assert response.request_limit == 1000000
+        assert response.usage_percent == 1.5595
         assert response.is_active is True
         assert "support@zip.tax" in response.message
 
