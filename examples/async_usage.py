@@ -96,7 +96,7 @@ async def main():
 
         # Process results
         for address, response in zip(addresses, responses):
-            print(f"\nAddress: {response.addressDetail.normalizedAddress}")
+            print(f"\nAddress: {response.address_detail.normalized_address}")
             if response.tax_summaries:
                 for summary in response.tax_summaries:
                     print(f"  {summary.summary_name}: {summary.rate * 100:.2f}%")
@@ -125,9 +125,9 @@ async def main():
             metrics_task,
         )
 
-        print(f"\nAddress lookup: {address_response.addressDetail.normalizedAddress}")
-        print(f"Location lookup: {location_response.addressDetail.normalizedAddress}")
-        print(f"Account metrics: {metrics.core_request_count:,} core requests")
+        print(f"\nAddress lookup: {address_response.address_detail.normalized_address}")
+        print(f"Location lookup: {location_response.address_detail.normalized_address}")
+        print(f"Account metrics: {metrics.request_count:,} requests")
 
         # Example 3: Process results as they complete
         print("\n" + "=" * 60)
@@ -148,7 +148,7 @@ async def main():
         # Process results as they complete
         for coro in asyncio.as_completed(tasks):
             response = await coro
-            print(f"Completed: {response.addressDetail.normalizedAddress}")
+            print(f"Completed: {response.address_detail.normalized_address}")
             if response.tax_summaries:
                 rate = response.tax_summaries[0].rate
                 print(f"  Tax rate: {rate * 100:.2f}%")

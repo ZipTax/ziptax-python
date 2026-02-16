@@ -556,7 +556,7 @@ This file is used as a reference for code generation and documentation.
   },
   "baseRates": [...],
   "taxSummaries": [...],
-  "addressDetail": {...}
+  "addressDetail": {...}   // Python: response.address_detail
 }
 ```
 
@@ -773,6 +773,6 @@ For API-specific questions:
 
 ---
 
-**Last Updated**: 2024-02-16
+**Last Updated**: 2025-02-16
 **SDK Version**: 0.2.0-beta
 **Maintained By**: ZipTax Team

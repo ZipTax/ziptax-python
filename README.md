@@ -56,13 +56,13 @@ client.close()
 ### Initialize the Client
 
 ```python
-from ziptax import ZiptaxClient
+from ziptax import ZipTaxClient
 
 # Basic initialization
-client = ZiptaxClient.api_key("your-api-key-here")
+client = ZipTaxClient.api_key("your-api-key-here")
 
 # With custom configuration
-client = ZiptaxClient.api_key(
+client = ZipTaxClient.api_key(
     "your-api-key-here",
     timeout=60,           # Request timeout in seconds
     max_retries=5,        # Maximum retry attempts
@@ -70,7 +70,7 @@ client = ZiptaxClient.api_key(
 )
 
 # Using as a context manager (recommended)
-with ZiptaxClient.api_key("your-api-key-here") as client:
+with ZipTaxClient.api_key("your-api-key-here") as client:
     response = client.request.GetSalesTaxByAddress("123 Main St")
 ```
 
@@ -289,7 +289,7 @@ except ZipTaxNotFoundError as e:
 You can configure the client using dict-style access:
 
 ```python
-client = ZiptaxClient.api_key("your-api-key-here")
+client = ZipTaxClient.api_key("your-api-key-here")
 
 # Set configuration options
 client.config["format"] = "json"

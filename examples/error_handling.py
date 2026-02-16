@@ -197,7 +197,7 @@ def example_comprehensive_error_handling():
         response = client.request.GetSalesTaxByAddress(
             "200 Spectrum Center Drive, Irvine, CA 92618"
         )
-        print(f"Success! Address: {response.addressDetail.normalizedAddress}")
+        print(f"Success! Address: {response.address_detail.normalized_address}")
         if response.tax_summaries:
             rate = response.tax_summaries[0].rate
             print(f"Tax rate: {rate * 100:.2f}%")
