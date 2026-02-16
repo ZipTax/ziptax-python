@@ -264,8 +264,7 @@ Examples:
     parser.add_argument(
         "bump_type",
         nargs="?",
-        choices=["major", "minor", "patch"],
-        help="Type of version bump or explicit version number",
+        help="Type of version bump (major, minor, patch) or explicit version (e.g. 0.2.0-beta)",
     )
     parser.add_argument(
         "--check",
