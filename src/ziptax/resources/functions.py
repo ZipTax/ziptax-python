@@ -1,9 +1,20 @@
 """API functions for the ZipTax SDK."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from ..models import V60AccountMetrics, V60PostalCodeResponse, V60Response
+from ..config import Config
+from ..exceptions import ZipTaxCloudConfigError
+from ..models import (
+    CreateOrderRequest,
+    OrderResponse,
+    RefundTransactionRequest,
+    RefundTransactionResponse,
+    UpdateOrderRequest,
+    V60AccountMetrics,
+    V60PostalCodeResponse,
+    V60Response,
+)
 from ..utils.http import HTTPClient
 from ..utils.retry import retry_with_backoff
 from ..utils.validation import (
@@ -22,16 +33,25 @@ class Functions:
     """Functions class for ZipTax API endpoints."""
 
     def __init__(
-        self, http_client: HTTPClient, max_retries: int = 3, retry_delay: float = 1.0
+        self,
+        http_client: HTTPClient,
+        config: Config,
+        taxcloud_http_client: Optional[HTTPClient] = None,
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
     ):
         """Initialize Functions.
 
         Args:
-            http_client: HTTP client for making requests
+            http_client: HTTP client for making ZipTax requests
+            config: Configuration object
+            taxcloud_http_client: Optional HTTP client for TaxCloud requests
             max_retries: Maximum number of retry attempts
             retry_delay: Delay between retries in seconds
         """
         self.http_client = http_client
+        self.taxcloud_http_client = taxcloud_http_client
+        self.config = config
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 
@@ -211,3 +231,243 @@ class Functions:
 
         response_data = _make_request()
         return V60PostalCodeResponse(**response_data)
+
+    # =========================================================================
+    # TaxCloud API - Order Management Functions
+    # =========================================================================
+
+    def _check_taxcloud_config(self) -> None:
+        """Check if TaxCloud credentials are configured.
+
+        Raises:
+            ZipTaxCloudConfigError: If TaxCloud credentials are not configured
+        """
+        if not self.config.has_taxcloud_config or self.taxcloud_http_client is None:
+            raise ZipTaxCloudConfigError(
+                "TaxCloud credentials not configured. Please provide "
+                "taxcloud_connection_id and taxcloud_api_key when creating the client."
+            )
+
+    def CreateOrder(
+        self,
+        request: CreateOrderRequest,
+        address_autocomplete: str = "none",
+    ) -> OrderResponse:
+        """Create an order in TaxCloud.
+
+        Args:
+            request: CreateOrderRequest object with order details
+            address_autocomplete: Address autocomplete option (default: "none")
+                Options: "none", "origin", "destination", "all"
+
+        Returns:
+            OrderResponse object with created order details
+
+        Raises:
+            ZipTaxCloudConfigError: If TaxCloud credentials not configured
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> from ziptax.models import (
+            ...     CreateOrderRequest, TaxCloudAddress, CartItemWithTax,
+            ...     Tax, Currency
+            ... )
+            >>> request = CreateOrderRequest(
+            ...     order_id="my-order-1",
+            ...     customer_id="customer-453",
+            ...     transaction_date="2024-01-15T09:30:00Z",
+            ...     completed_date="2024-01-15T09:30:00Z",
+            ...     origin=TaxCloudAddress(
+            ...         line1="323 Washington Ave N",
+            ...         city="Minneapolis",
+            ...         state="MN",
+            ...         zip="55401-2427"
+            ...     ),
+            ...     destination=TaxCloudAddress(
+            ...         line1="323 Washington Ave N",
+            ...         city="Minneapolis",
+            ...         state="MN",
+            ...         zip="55401-2427"
+            ...     ),
+            ...     line_items=[
+            ...         CartItemWithTax(
+            ...             index=0,
+            ...             item_id="item-1",
+            ...             price=10.8,
+            ...             quantity=1.5,
+            ...             tax=Tax(amount=1.31, rate=0.0813)
+            ...         )
+            ...     ],
+            ...     currency=Currency(currency_code="USD")
+            ... )
+            >>> order = client.request.CreateOrder(request)
+        """
+        self._check_taxcloud_config()
+
+        # Build query parameters
+        params: Dict[str, Any] = {}
+        if address_autocomplete != "none":
+            params["addressAutocomplete"] = address_autocomplete
+
+        # Build path with connection ID
+        path = f"/tax/connections/{self.config.taxcloud_connection_id}/orders"
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            assert self.taxcloud_http_client is not None
+            return self.taxcloud_http_client.post(
+                path,
+                json=request.model_dump(by_alias=True, exclude_none=True),
+                params=params,
+            )
+
+        response_data = _make_request()
+        return OrderResponse(**response_data)
+
+    def GetOrder(self, order_id: str) -> OrderResponse:
+        """Retrieve an order from TaxCloud by ID.
+
+        Args:
+            order_id: The ID of the order to retrieve
+
+        Returns:
+            OrderResponse object with order details
+
+        Raises:
+            ZipTaxCloudConfigError: If TaxCloud credentials not configured
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> order = client.request.GetOrder("my-order-1")
+        """
+        self._check_taxcloud_config()
+
+        # Build path with connection ID and order ID
+        path = (
+            f"/tax/connections/{self.config.taxcloud_connection_id}/orders/{order_id}"
+        )
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            assert self.taxcloud_http_client is not None
+            return self.taxcloud_http_client.get(path)
+
+        response_data = _make_request()
+        return OrderResponse(**response_data)
+
+    def UpdateOrder(
+        self,
+        order_id: str,
+        request: UpdateOrderRequest,
+    ) -> OrderResponse:
+        """Update an existing order's completedDate in TaxCloud.
+
+        Args:
+            order_id: The ID of the order to update
+            request: UpdateOrderRequest object with updated completedDate
+
+        Returns:
+            OrderResponse object with updated order details
+
+        Raises:
+            ZipTaxCloudConfigError: If TaxCloud credentials not configured
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> from ziptax.models import UpdateOrderRequest
+            >>> request = UpdateOrderRequest(
+            ...     completed_date="2024-01-16T10:00:00Z"
+            ... )
+            >>> order = client.request.UpdateOrder("my-order-1", request)
+        """
+        self._check_taxcloud_config()
+
+        # Build path with connection ID and order ID
+        path = (
+            f"/tax/connections/{self.config.taxcloud_connection_id}/orders/{order_id}"
+        )
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            assert self.taxcloud_http_client is not None
+            return self.taxcloud_http_client.patch(
+                path, json=request.model_dump(by_alias=True, exclude_none=True)
+            )
+
+        response_data = _make_request()
+        return OrderResponse(**response_data)
+
+    def RefundOrder(
+        self,
+        order_id: str,
+        request: Optional[RefundTransactionRequest] = None,
+    ) -> List[RefundTransactionResponse]:
+        """Create a refund against an order in TaxCloud.
+
+        An order can only be refunded once, regardless of whether the order is
+        partially or fully refunded.
+
+        Args:
+            order_id: The ID of the order to refund
+            request: Optional RefundTransactionRequest with items to refund.
+                If None or items is empty, entire order will be refunded.
+
+        Returns:
+            List of RefundTransactionResponse objects
+
+        Raises:
+            ZipTaxCloudConfigError: If TaxCloud credentials not configured
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            Full refund:
+            >>> refunds = client.request.RefundOrder("my-order-1")
+
+            Partial refund:
+            >>> from ziptax.models import (
+            ...     RefundTransactionRequest, CartItemRefundWithTaxRequest
+            ... )
+            >>> request = RefundTransactionRequest(
+            ...     items=[
+            ...         CartItemRefundWithTaxRequest(
+            ...             item_id="item-1",
+            ...             quantity=1.0
+            ...         )
+            ...     ]
+            ... )
+            >>> refunds = client.request.RefundOrder("my-order-1", request)
+        """
+        self._check_taxcloud_config()
+
+        # Build path with connection ID and order ID
+        conn_id = self.config.taxcloud_connection_id
+        path = f"/tax/connections/{conn_id}/orders/refunds/{order_id}"
+
+        # Prepare request body
+        request_body = {}
+        if request:
+            request_body = request.model_dump(by_alias=True, exclude_none=True)
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> List[Dict[str, Any]]:
+            assert self.taxcloud_http_client is not None
+            return self.taxcloud_http_client.post(path, json=request_body)
+
+        response_data = _make_request()
+        return [RefundTransactionResponse(**item) for item in response_data]

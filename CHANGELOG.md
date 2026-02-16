@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **TaxCloud Integration**: Optional support for TaxCloud order management API
+  - `CreateOrder()` - Create orders in TaxCloud with line items and tax calculations
+  - `GetOrder()` - Retrieve existing orders by ID
+  - `UpdateOrder()` - Update order completed dates
+  - `RefundOrder()` - Create full or partial refunds against orders
+- **18 New Pydantic Models** for TaxCloud data structures:
+  - Address models: `TaxCloudAddress`, `TaxCloudAddressResponse`
+  - Order models: `CreateOrderRequest`, `OrderResponse`, `UpdateOrderRequest`
+  - Line item models: `CartItemWithTax`, `CartItemWithTaxResponse`
+  - Refund models: `RefundTransactionRequest`, `RefundTransactionResponse`, `CartItemRefundWithTaxRequest`, `CartItemRefundWithTaxResponse`
+  - Supporting models: `Tax`, `RefundTax`, `Currency`, `CurrencyResponse`, `Exemption`
+- **HTTP Client Enhancements**:
+  - Added `post()` method for POST requests
+  - Added `patch()` method for PATCH requests
+  - Both methods support JSON payloads, query parameters, and headers
+- **Dual API Architecture**:
+  - Seamlessly manage two separate HTTP clients (ZipTax + TaxCloud)
+  - TaxCloud features are completely optional - enabled only when credentials provided
+  - Automatic credential validation with helpful error messages
+- **New Exception**: `ZipTaxCloudConfigError` for TaxCloud configuration issues
+- **Configuration Enhancements**:
+  - Added `taxcloud_connection_id` parameter for TaxCloud Connection ID
+  - Added `taxcloud_api_key` parameter for TaxCloud API authentication
+  - Added `taxcloud_base_url` parameter (default: `https://api.v3.taxcloud.com`)
+  - Added `has_taxcloud_config` property to check TaxCloud configuration
+- **Documentation Updates**:
+  - Comprehensive TaxCloud usage examples in README.md
+  - New example file: `examples/taxcloud_orders.py`
+  - Created `CLAUDE.md` - AI development guide for the project
+  - Updated API reference with TaxCloud endpoints
+  - Updated exception hierarchy documentation
+- **Postal Code Lookup**: Added `GetRatesByPostalCode()` function to README examples
+
+### Technical Details
+- TaxCloud API uses separate authentication with X-API-KEY header
+- Connection ID is automatically injected into TaxCloud API paths
+- All TaxCloud methods validate credentials before execution
+- Type-safe implementation with assertions for optional HTTP clients
+- Maintains backward compatibility - all existing ZipTax functionality unchanged
+- Passes all linting (ruff) and type checking (mypy) with no errors
+
 ## [1.0.0] - 2024-01-21
 
 ### Added

@@ -118,3 +118,9 @@ class ZipTaxRetryError(ZipTaxError):
         super().__init__(message)
         self.attempts = attempts
         self.last_exception = last_exception
+
+
+class ZipTaxCloudConfigError(ZipTaxError):
+    """Exception raised when TaxCloud credentials are not configured."""
+
+    pass

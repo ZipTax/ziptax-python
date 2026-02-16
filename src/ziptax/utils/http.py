@@ -143,6 +143,106 @@ class HTTPClient:
         except Exception as e:
             raise ZipTaxAPIError(f"Unexpected error: {e}")
 
+    def post(
+        self,
+        path: str,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Any:
+        """Make a POST request to the API.
+
+        Args:
+            path: API endpoint path
+            json: JSON request body
+            params: Query parameters
+            headers: Additional headers
+
+        Returns:
+            Response data (dict or list)
+
+        Raises:
+            ZipTaxConnectionError: For connection errors
+            ZipTaxTimeoutError: For timeout errors
+            ZipTaxAPIError: For API errors
+        """
+        url = f"{self.base_url}{path}"
+        logger.debug(f"POST {url} with json: {json}, params: {params}")
+
+        try:
+            response = self.session.post(
+                url,
+                json=json,
+                params=params,
+                headers=headers,
+                timeout=self.timeout,
+            )
+            logger.debug(f"Response status: {response.status_code}")
+
+            if not response.ok:
+                self._handle_error_response(response)
+
+            return response.json()
+
+        except requests.exceptions.Timeout as e:
+            raise ZipTaxTimeoutError(f"Request timed out after {self.timeout}s: {e}")
+        except requests.exceptions.ConnectionError as e:
+            raise ZipTaxConnectionError(f"Connection error: {e}")
+        except (ZipTaxAPIError, ZipTaxTimeoutError, ZipTaxConnectionError):
+            raise
+        except Exception as e:
+            raise ZipTaxAPIError(f"Unexpected error: {e}")
+
+    def patch(
+        self,
+        path: str,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """Make a PATCH request to the API.
+
+        Args:
+            path: API endpoint path
+            json: JSON request body
+            params: Query parameters
+            headers: Additional headers
+
+        Returns:
+            Response data as dictionary
+
+        Raises:
+            ZipTaxConnectionError: For connection errors
+            ZipTaxTimeoutError: For timeout errors
+            ZipTaxAPIError: For API errors
+        """
+        url = f"{self.base_url}{path}"
+        logger.debug(f"PATCH {url} with json: {json}, params: {params}")
+
+        try:
+            response = self.session.patch(
+                url,
+                json=json,
+                params=params,
+                headers=headers,
+                timeout=self.timeout,
+            )
+            logger.debug(f"Response status: {response.status_code}")
+
+            if not response.ok:
+                self._handle_error_response(response)
+
+            return cast(Dict[str, Any], response.json())
+
+        except requests.exceptions.Timeout as e:
+            raise ZipTaxTimeoutError(f"Request timed out after {self.timeout}s: {e}")
+        except requests.exceptions.ConnectionError as e:
+            raise ZipTaxConnectionError(f"Connection error: {e}")
+        except (ZipTaxAPIError, ZipTaxTimeoutError, ZipTaxConnectionError):
+            raise
+        except Exception as e:
+            raise ZipTaxAPIError(f"Unexpected error: {e}")
+
     def close(self) -> None:
         """Close the HTTP session."""
         self.session.close()
