@@ -44,7 +44,7 @@ class TestGetSalesTaxByAddress:
             address="200 Spectrum Center Drive, Irvine, CA 92618",
             taxability_code="12345",
             country_code="USA",
-            historical="2024-01",
+            historical="202401",
             format="json",
         )
 
@@ -55,7 +55,7 @@ class TestGetSalesTaxByAddress:
             == "200 Spectrum Center Drive, Irvine, CA 92618"
         )
         assert call_args[1]["params"]["taxabilityCode"] == "12345"
-        assert call_args[1]["params"]["historical"] == "2024-01"
+        assert call_args[1]["params"]["historical"] == "202401"
 
     def test_empty_address_validation(self, mock_http_client, mock_config):
         """Test validation of empty address."""
@@ -86,7 +86,7 @@ class TestGetSalesTaxByAddress:
         """Test validation of historical date format."""
         functions = Functions(mock_http_client, mock_config)
 
-        with pytest.raises(ZipTaxValidationError, match="must be in YYYY-MM format"):
+        with pytest.raises(ZipTaxValidationError, match="must be in YYYYMM format"):
             functions.GetSalesTaxByAddress(
                 "200 Spectrum Center Drive",
                 historical="2024-13-01",
@@ -122,7 +122,7 @@ class TestGetSalesTaxByGeoLocation:
             lat="33.6489",
             lng="-117.8386",
             country_code="USA",
-            historical="2024-01",
+            historical="202401",
             format="json",
         )
 

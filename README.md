@@ -80,7 +80,7 @@ with ZiptaxClient.api_key("your-api-key-here") as client:
 response = client.request.GetSalesTaxByAddress(
     address="200 Spectrum Center Drive, Irvine, CA 92618",
     country_code="USA",      # Optional: "USA" or "CAN" (default: "USA")
-    historical="2024-01",    # Optional: Historical date (YYYY-MM format)
+    historical="202401",     # Optional: Historical date (YYYYMM format)
     format="json",           # Optional: Response format (default: "json")
 )
 

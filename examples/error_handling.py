@@ -64,7 +64,7 @@ def example_validation_errors():
         )
     except ZipTaxValidationError as e:
         print(f"\nValidation Error: {e.message}")
-        print("Fix: Use YYYY-MM format (e.g., '2024-01')")
+        print("Fix: Use YYYYMM format (e.g., '202401')")
 
     try:
         # This will fail due to invalid coordinates

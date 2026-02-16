@@ -152,10 +152,9 @@ resources:
             format: "date"
             required: false
             location: "query"
-            description: "Historical date for rates (YYYY-MM format)"
+            description: "Historical date for rates (YYYYMM format, e.g. 202401)"
             validation:
-              pattern: "^[0-9]{4}-[0-9]{2}$"
-            notes: "KNOWN ISSUE: The live API may reject YYYY-MM format. Contact support@zip.tax to confirm the accepted format."
+              pattern: "^[0-9]{6}$"
           - name: "format"
             type: "string"
             required: false
@@ -198,10 +197,9 @@ resources:
             format: "date"
             required: false
             location: "query"
-            description: "Historical date for rates (YYYY-MM format)"
+            description: "Historical date for rates (YYYYMM format, e.g. 202401)"
             validation:
-              pattern: "^[0-9]{4}-[0-9]{2}$"
-            notes: "KNOWN ISSUE: The live API may reject YYYY-MM format. Contact support@zip.tax to confirm the accepted format."
+              pattern: "^[0-9]{6}$"
           - name: "format"
             type: "string"
             required: false

@@ -69,7 +69,7 @@ class Functions:
             address: Full or partial street address for geocoding
             taxability_code: Optional taxability code
             country_code: Country code (default: "USA")
-            historical: Historical date for rates (YYYY-MM format)
+            historical: Historical date for rates (YYYYMM format, e.g. "202401")
             format: Response format (default: "json")
 
         Returns:
@@ -124,7 +124,7 @@ class Functions:
             lat: Latitude for geolocation
             lng: Longitude for geolocation
             country_code: Country code (default: "USA")
-            historical: Historical date for rates (YYYY-MM format)
+            historical: Historical date for rates (YYYYMM format, e.g. "202401")
             format: Response format (default: "json")
 
         Returns:

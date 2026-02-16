@@ -62,10 +62,10 @@ print("=" * 60)
 
 response = client.request.GetSalesTaxByAddress(
     address="1 Apple Park Way, Cupertino, CA 95014",
-    historical="2024-01",
+    historical="202401",
 )
 
-print(f"Address: {response.addressDetail.normalizedAddress}")
+print(f"Address: {response.address_detail.normalized_address}")
 if response.tax_summaries:
     for summary in response.tax_summaries:
         print(f"{summary.summary_name}: {summary.rate * 100:.2f}%")

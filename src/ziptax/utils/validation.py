@@ -76,28 +76,22 @@ def validate_historical_date(historical: str) -> None:
     """Validate historical date parameter.
 
     Args:
-        historical: Historical date string to validate (YYYY-MM format)
+        historical: Historical date string to validate (YYYYMM format)
 
     Raises:
         ZipTaxValidationError: If historical date is invalid
-
-    Note:
-        The spec documents YYYY-MM format. If the API rejects this format,
-        please contact the ZipTax API team (support@zip.tax) to confirm
-        the accepted format for the historical parameter.
     """
-    pattern = r"^[0-9]{4}-[0-9]{2}$"
+    pattern = r"^[0-9]{4}[0-9]{2}$"
 
     if not re.match(pattern, historical):
         raise ZipTaxValidationError(
-            f"Historical date must be in YYYY-MM format, got: {historical}"
+            f"Historical date must be in YYYYMM format, got: {historical}"
         )
 
     # Validate year and month ranges
     try:
-        year, month = historical.split("-")
-        year_int = int(year)
-        month_int = int(month)
+        year_int = int(historical[:4])
+        month_int = int(historical[4:6])
 
         if year_int < 1900 or year_int > 2100:
             raise ZipTaxValidationError(f"Invalid year: {year_int}")
@@ -107,7 +101,7 @@ def validate_historical_date(historical: str) -> None:
 
     except (ValueError, IndexError):
         raise ZipTaxValidationError(
-            f"Historical date must be in YYYY-MM format, got: {historical}"
+            f"Historical date must be in YYYYMM format, got: {historical}"
         )
 
 
