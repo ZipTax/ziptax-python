@@ -13,16 +13,22 @@ class Config:
         timeout: int = 30,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        taxcloud_connection_id: Optional[str] = None,
+        taxcloud_api_key: Optional[str] = None,
+        taxcloud_base_url: str = "https://api.v3.taxcloud.com",
         **kwargs: Any,
     ):
         """Initialize Config.
 
         Args:
             api_key: ZipTax API key
-            base_url: Base URL for the API
+            base_url: Base URL for the ZipTax API
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
             retry_delay: Delay between retries in seconds
+            taxcloud_connection_id: Optional TaxCloud Connection ID (UUID format)
+            taxcloud_api_key: Optional TaxCloud API key for order management
+            taxcloud_base_url: Base URL for the TaxCloud API
             **kwargs: Additional configuration options
         """
         self._api_key = api_key
@@ -30,6 +36,9 @@ class Config:
         self._timeout = timeout
         self._max_retries = max_retries
         self._retry_delay = retry_delay
+        self._taxcloud_connection_id = taxcloud_connection_id
+        self._taxcloud_api_key = taxcloud_api_key
+        self._taxcloud_base_url = taxcloud_base_url.rstrip("/")
         self._extra: Dict[str, Any] = kwargs
 
     @property
@@ -72,6 +81,26 @@ class Config:
         """Set retry delay."""
         self._retry_delay = value
 
+    @property
+    def taxcloud_connection_id(self) -> Optional[str]:
+        """Get TaxCloud connection ID."""
+        return self._taxcloud_connection_id
+
+    @property
+    def taxcloud_api_key(self) -> Optional[str]:
+        """Get TaxCloud API key."""
+        return self._taxcloud_api_key
+
+    @property
+    def taxcloud_base_url(self) -> str:
+        """Get TaxCloud base URL."""
+        return self._taxcloud_base_url
+
+    @property
+    def has_taxcloud_config(self) -> bool:
+        """Check if TaxCloud credentials are configured."""
+        return bool(self._taxcloud_connection_id and self._taxcloud_api_key)
+
     def __getitem__(self, key: str) -> Any:
         """Get configuration value by key.
 
@@ -83,7 +112,7 @@ class Config:
         """
         if hasattr(self, f"_{key}"):
             return getattr(self, f"_{key}")
-        return self._extra.get(key)
+        return self._extra[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set configuration value by key.
@@ -118,11 +147,20 @@ class Config:
         Returns:
             Dictionary representation of config
         """
-        return {
+        result: Dict[str, Any] = {
             "api_key": "***",  # Mask API key
             "base_url": self._base_url,
             "timeout": self._timeout,
             "max_retries": self._max_retries,
             "retry_delay": self._retry_delay,
-            **self._extra,
         }
+
+        if self._taxcloud_connection_id:
+            result["taxcloud_connection_id"] = self._taxcloud_connection_id
+        if self._taxcloud_api_key:
+            result["taxcloud_api_key"] = "***"  # Mask TaxCloud API key
+        if self._taxcloud_base_url != "https://api.v3.taxcloud.com":
+            result["taxcloud_base_url"] = self._taxcloud_base_url
+
+        result.update(self._extra)
+        return result

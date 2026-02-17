@@ -1,9 +1,25 @@
 """Models module for ZipTax SDK."""
 
 from .responses import (
+    CartItemRefundWithTaxRequest,
+    CartItemRefundWithTaxResponse,
+    CartItemWithTax,
+    CartItemWithTaxResponse,
+    CreateOrderRequest,
+    Currency,
+    CurrencyResponse,
+    Exemption,
     JurisdictionName,
     JurisdictionType,
+    OrderResponse,
+    RefundTax,
+    RefundTransactionRequest,
+    RefundTransactionResponse,
+    Tax,
+    TaxCloudAddress,
+    TaxCloudAddressResponse,
     TaxType,
+    UpdateOrderRequest,
     V60AccountMetrics,
     V60AddressDetail,
     V60BaseRate,
@@ -21,6 +37,7 @@ from .responses import (
 )
 
 __all__ = [
+    # V60 Models
     "V60Response",
     "V60ResponseInfo",
     "V60Metadata",
@@ -38,4 +55,21 @@ __all__ = [
     "JurisdictionType",
     "JurisdictionName",
     "TaxType",
+    # TaxCloud Models
+    "TaxCloudAddress",
+    "TaxCloudAddressResponse",
+    "Tax",
+    "RefundTax",
+    "Currency",
+    "CurrencyResponse",
+    "Exemption",
+    "CartItemWithTax",
+    "CartItemWithTaxResponse",
+    "CreateOrderRequest",
+    "OrderResponse",
+    "UpdateOrderRequest",
+    "CartItemRefundWithTaxRequest",
+    "CartItemRefundWithTaxResponse",
+    "RefundTransactionRequest",
+    "RefundTransactionResponse",
 ]

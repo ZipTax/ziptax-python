@@ -19,12 +19,14 @@ def test_address_lookup():
         )
 
         print(f"✓ Success!")
-        print(f"  Address: {response.addressDetail.normalizedAddress}")
-        print(f"  Latitude: {response.addressDetail.geoLat}")
-        print(f"  Longitude: {response.addressDetail.geoLng}")
+        print(f"  Address: {response.address_detail.normalized_address}")
+        print(f"  Latitude: {response.address_detail.geo_lat}")
+        print(f"  Longitude: {response.address_detail.geo_lng}")
 
-        print(f"\n  Service Taxable: {response.service.taxable}")
-        print(f"  Shipping Taxable: {response.shipping.taxable}")
+        if response.service:
+            print(f"\n  Service Taxable: {response.service.taxable}")
+        if response.shipping:
+            print(f"  Shipping Taxable: {response.shipping.taxable}")
 
         if response.sourcing_rules:
             print(f"  Sourcing: {response.sourcing_rules.value} ({response.sourcing_rules.description})")
@@ -71,7 +73,7 @@ def test_geolocation_lookup():
         )
 
         print(f"✓ Success!")
-        print(f"  Address: {response.addressDetail.normalizedAddress}")
+        print(f"  Address: {response.address_detail.normalized_address}")
 
         if response.tax_summaries:
             for summary in response.tax_summaries:
@@ -98,11 +100,8 @@ def test_account_metrics():
         metrics = client.request.GetAccountMetrics()
 
         print(f"✓ Success!")
-        print(f"  Core Requests: {metrics.core_request_count:,} / {metrics.core_request_limit:,}")
-        print(f"  Core Usage: {metrics.core_usage_percent:.2f}%")
-        print(f"  Geo Enabled: {metrics.geo_enabled}")
-        print(f"  Geo Requests: {metrics.geo_request_count:,} / {metrics.geo_request_limit:,}")
-        print(f"  Geo Usage: {metrics.geo_usage_percent:.2f}%")
+        print(f"  Requests: {metrics.request_count:,} / {metrics.request_limit:,}")
+        print(f"  Usage: {metrics.usage_percent:.2f}%")
         print(f"  Account Active: {metrics.is_active}")
         print(f"  Message: {metrics.message}")
 

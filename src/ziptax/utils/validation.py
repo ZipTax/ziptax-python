@@ -14,14 +14,14 @@ def validate_address(address: str) -> None:
     Raises:
         ZipTaxValidationError: If address is invalid
     """
+    if not isinstance(address, str):
+        raise ZipTaxValidationError("Address must be a string")
+
     if not address:
         raise ZipTaxValidationError("Address cannot be empty")
 
     if len(address) > 100:
         raise ZipTaxValidationError("Address cannot exceed 100 characters")
-
-    if not isinstance(address, str):
-        raise ZipTaxValidationError("Address must be a string")
 
 
 def validate_coordinates(lat: str, lng: str) -> None:
@@ -76,23 +76,22 @@ def validate_historical_date(historical: str) -> None:
     """Validate historical date parameter.
 
     Args:
-        historical: Historical date string to validate (YYYY-MM format)
+        historical: Historical date string to validate (YYYYMM format)
 
     Raises:
         ZipTaxValidationError: If historical date is invalid
     """
-    pattern = r"^[0-9]{4}-[0-9]{2}$"
+    pattern = r"^[0-9]{4}[0-9]{2}$"
 
     if not re.match(pattern, historical):
         raise ZipTaxValidationError(
-            f"Historical date must be in YYYY-MM format, got: {historical}"
+            f"Historical date must be in YYYYMM format, got: {historical}"
         )
 
     # Validate year and month ranges
     try:
-        year, month = historical.split("-")
-        year_int = int(year)
-        month_int = int(month)
+        year_int = int(historical[:4])
+        month_int = int(historical[4:6])
 
         if year_int < 1900 or year_int > 2100:
             raise ZipTaxValidationError(f"Invalid year: {year_int}")
@@ -102,7 +101,7 @@ def validate_historical_date(historical: str) -> None:
 
     except (ValueError, IndexError):
         raise ZipTaxValidationError(
-            f"Historical date must be in YYYY-MM format, got: {historical}"
+            f"Historical date must be in YYYYMM format, got: {historical}"
         )
 
 
@@ -115,7 +114,7 @@ def validate_format(format_str: str) -> None:
     Raises:
         ZipTaxValidationError: If format is invalid
     """
-    valid_formats = ["json", "xml"]
+    valid_formats = ["json"]
 
     if format_str not in valid_formats:
         raise ZipTaxValidationError(
@@ -142,11 +141,29 @@ def validate_api_key(api_key: str) -> None:
         raise ZipTaxValidationError("API key appears to be invalid (too short)")
 
 
+def validate_address_autocomplete(address_autocomplete: str) -> None:
+    """Validate address_autocomplete parameter for TaxCloud orders.
+
+    Args:
+        address_autocomplete: Address autocomplete option to validate
+
+    Raises:
+        ZipTaxValidationError: If address_autocomplete value is invalid
+    """
+    valid_options = ["none", "origin", "destination", "all"]
+
+    if address_autocomplete not in valid_options:
+        raise ZipTaxValidationError(
+            f"address_autocomplete must be one of {valid_options}, "
+            f"got: {address_autocomplete!r}"
+        )
+
+
 def validate_postal_code(postal_code: str) -> None:
     """Validate US postal code parameter.
 
     Args:
-        postal_code: Postal code string to validate (5-digit or 9-digit format)
+        postal_code: Postal code string to validate (5-digit format only)
 
     Raises:
         ZipTaxValidationError: If postal code is invalid
@@ -157,11 +174,11 @@ def validate_postal_code(postal_code: str) -> None:
     if not isinstance(postal_code, str):
         raise ZipTaxValidationError("Postal code must be a string")
 
-    # Pattern for 5-digit or 5+4 digit format
-    pattern = r"^[0-9]{5}(-[0-9]{4})?$"
+    # Pattern for 5-digit format only (API does not accept 9-digit codes)
+    pattern = r"^[0-9]{5}$"
 
     if not re.match(pattern, postal_code):
         raise ZipTaxValidationError(
-            f"Postal code must be in 5-digit (e.g., 92694) or "
-            f"9-digit (e.g., 92694-1234) format, got: {postal_code}"
+            f"Postal code must be in 5-digit format (e.g., 92694), "
+            f"got: {postal_code}"
         )

@@ -163,7 +163,7 @@ async def test_async_retry_with_backoff_success():
     async def async_mock():
         return mock_func()
 
-    decorator = await async_retry_with_backoff()
+    decorator = async_retry_with_backoff()
     decorated = decorator(async_mock)
 
     result = await decorated()
@@ -184,7 +184,7 @@ async def test_async_retry_with_backoff_success_after_retry():
             raise ZipTaxServerError("Server error", 500, None)
         return "success"
 
-    decorator = await async_retry_with_backoff(max_retries=2, base_delay=0.01)
+    decorator = async_retry_with_backoff(max_retries=2, base_delay=0.01)
     decorated = decorator(async_func)
 
     with patch("asyncio.sleep"):
@@ -201,7 +201,7 @@ async def test_async_retry_with_backoff_max_retries_exceeded():
     async def async_func():
         raise ZipTaxServerError("Server error", 500, None)
 
-    decorator = await async_retry_with_backoff(max_retries=2, base_delay=0.01)
+    decorator = async_retry_with_backoff(max_retries=2, base_delay=0.01)
     decorated = decorator(async_func)
 
     with patch("asyncio.sleep"):
@@ -219,7 +219,7 @@ async def test_async_retry_with_backoff_non_retryable_error():
     async def async_func():
         raise ZipTaxValidationError("Validation error")
 
-    decorator = await async_retry_with_backoff(max_retries=3)
+    decorator = async_retry_with_backoff(max_retries=3)
     decorated = decorator(async_func)
 
     with pytest.raises(ZipTaxValidationError):
@@ -233,7 +233,7 @@ async def test_async_retry_with_backoff_exponential_delay():
     async def async_func():
         raise ZipTaxServerError("Server error", 500, None)
 
-    decorator = await async_retry_with_backoff(
+    decorator = async_retry_with_backoff(
         max_retries=3, base_delay=1.0, exponential_base=2.0, max_delay=60.0
     )
     decorated = decorator(async_func)
@@ -261,7 +261,7 @@ async def test_async_retry_with_backoff_rate_limit_retry_after():
             )
         return "success"
 
-    decorator = await async_retry_with_backoff(max_retries=2, base_delay=1.0)
+    decorator = async_retry_with_backoff(max_retries=2, base_delay=1.0)
     decorated = decorator(async_func)
 
     with patch("asyncio.sleep") as mock_sleep:

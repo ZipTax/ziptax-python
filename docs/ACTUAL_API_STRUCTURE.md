@@ -123,17 +123,19 @@ Base rates contain:
 
 ## Python SDK Field Mapping
 
-| API Field          | Python Property    | Type                    |
-|--------------------|--------------------|-------------------------|
-| `metadata`         | `metadata`         | V60Metadata             |
-| `metadata.response`| `response`         | V60ResponseInfo         |
-| `baseRates`        | `base_rates`       | List[V60BaseRate]       |
-| `service`          | `service`          | V60Service              |
-| `shipping`         | `shipping`         | V60Shipping             |
-| `sourcingRules`    | `sourcing_rules`   | V60SourcingRules        |
-| `taxSummaries`     | `tax_summaries`    | List[V60TaxSummary]     |
-| `displayRates`     | `display_rates`    | List[V60DisplayRate]    |
-| `addressDetail`    | `addressDetail`    | V60AddressDetail        |
+| API Field          | Python Property    | Type                    | Required |
+|--------------------|--------------------|-------------------------|----------|
+| `metadata`         | `metadata`         | V60Metadata             | Yes      |
+| `metadata.response`| `response`         | V60ResponseInfo         | Yes      |
+| `baseRates`        | `base_rates`       | List[V60BaseRate]       | No       |
+| `service`          | `service`          | V60Service              | No       |
+| `shipping`         | `shipping`         | V60Shipping             | No       |
+| `sourcingRules`    | `sourcing_rules`   | V60SourcingRules        | No       |
+| `taxSummaries`     | `tax_summaries`    | List[V60TaxSummary]     | No       |
+| `displayRates`     | `display_rates`    | List[V60DisplayRate]    | -        |
+| `addressDetail`    | `address_detail`   | V60AddressDetail        | Yes      |
+
+**Note:** `service` and `shipping` are Optional because some jurisdictions (e.g., Canada) may not include them.
 
 ## Usage Examples
 
@@ -205,6 +207,22 @@ if response.base_rates:
 ### 5. Optional Fields
 - **Before:** Many fields were required
 - **After:** Made appropriate fields optional (`rateId`, `jurDescription`, `jurTaxCode`)
+
+### 6. Address Detail Field Names (v0.2.0-beta)
+- **Before:** `addressDetail` property, `normalizedAddress`, `geoLat`, `geoLng` field names
+- **After:** `address_detail` property (alias: `addressDetail`), `normalized_address` (alias: `normalizedAddress`), `geo_lat` (alias: `geoLat`), `geo_lng` (alias: `geoLng`)
+
+### 7. Service/Shipping Optionality (v0.2.0-beta)
+- **Before:** `service` and `shipping` were required fields
+- **After:** Both are Optional to support Canada and other jurisdictions
+
+### 8. Account Metrics (v0.2.0-beta)
+- **Before:** `core_request_count`, `geo_request_count`, etc. (per spec)
+- **After:** `request_count`, `request_limit`, `usage_percent` (matches live API)
+
+### 9. Historical Date Format (v0.2.0-beta)
+- **Before:** `YYYY-MM` format (e.g., `"2024-01"`)
+- **After:** `YYYYMM` format (e.g., `"202401"`) - matches live API requirement
 
 ## Testing with Real API
 

@@ -1,9 +1,9 @@
 """Response models for the ZipTax API."""
 
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class JurisdictionType(str, Enum):
@@ -82,7 +82,7 @@ class V60Service(BaseModel):
     adjustment_type: str = Field(
         ..., alias="adjustmentType", description="Service adjustment type"
     )
-    taxable: Literal["Y", "N"] = Field(..., description="Taxability indicator")
+    taxable: str = Field(..., description="Taxability indicator")
     description: str = Field(..., description="Service description")
 
 
@@ -94,7 +94,7 @@ class V60Shipping(BaseModel):
     adjustment_type: str = Field(
         ..., alias="adjustmentType", description="Shipping adjustment type"
     )
-    taxable: Literal["Y", "N"] = Field(..., description="Taxability indicator")
+    taxable: str = Field(..., description="Taxability indicator")
     description: str = Field(..., description="Shipping description")
 
 
@@ -107,9 +107,7 @@ class V60SourcingRules(BaseModel):
         ..., alias="adjustmentType", description="Sourcing rule type"
     )
     description: str = Field(..., description="Sourcing rule description")
-    value: Literal["O", "D"] = Field(
-        ..., description="Origin (O) or Destination (D) based"
-    )
+    value: str = Field(..., description="Origin (O) or Destination (D) based")
 
 
 class V60DisplayRate(BaseModel):
@@ -141,12 +139,12 @@ class V60AddressDetail(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    normalizedAddress: str = Field(..., description="Normalized address")
-    incorporated: Literal["true", "false"] = Field(
-        ..., description="Incorporation status"
+    normalized_address: str = Field(
+        ..., alias="normalizedAddress", description="Normalized address"
     )
-    geoLat: float = Field(..., description="Geocoded latitude")
-    geoLng: float = Field(..., description="Geocoded longitude")
+    incorporated: str = Field(..., description="Incorporation status")
+    geo_lat: float = Field(..., alias="geoLat", description="Geocoded latitude")
+    geo_lng: float = Field(..., alias="geoLng", description="Geocoded longitude")
 
 
 class V60Response(BaseModel):
@@ -158,8 +156,12 @@ class V60Response(BaseModel):
     base_rates: Optional[List[V60BaseRate]] = Field(
         None, alias="baseRates", description="Base tax rates by jurisdiction"
     )
-    service: V60Service = Field(..., description="Service taxability information")
-    shipping: V60Shipping = Field(..., description="Shipping taxability information")
+    service: Optional[V60Service] = Field(
+        None, description="Service taxability information"
+    )
+    shipping: Optional[V60Shipping] = Field(
+        None, description="Shipping taxability information"
+    )
     sourcing_rules: Optional[V60SourcingRules] = Field(
         None,
         alias="sourcingRules",
@@ -168,32 +170,56 @@ class V60Response(BaseModel):
     tax_summaries: Optional[List[V60TaxSummary]] = Field(
         None, alias="taxSummaries", description="Tax rate summaries"
     )
-    addressDetail: V60AddressDetail = Field(..., description="Address details")
+    address_detail: V60AddressDetail = Field(
+        ..., alias="addressDetail", description="Address details"
+    )
 
 
 class V60AccountMetrics(BaseModel):
-    """Account metrics by API key."""
+    """Account metrics by API key.
 
-    model_config = ConfigDict(populate_by_name=True)
+    The live API returns flat fields (request_count, request_limit,
+    usage_percent). The spec also documents prefixed variants
+    (core_request_count, geo_request_count, core_request_limit,
+    geo_request_limit, core_usage_percent, geo_usage_percent) which
+    are accepted via validation_alias for backward compatibility.
 
-    core_request_count: int = Field(..., description="Number of core API requests made")
-    core_request_limit: int = Field(
-        ..., description="Maximum allowed core API requests"
+    Attributes:
+        request_count: Number of API requests made
+        request_limit: Maximum allowed API requests
+        usage_percent: Percentage of request limit used
+        is_active: Whether the account is currently active
+        message: Account status or informational message
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    request_count: int = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "request_count",
+            "core_request_count",
+            "geo_request_count",
+        ),
+        description="Number of API requests made",
     )
-    core_usage_percent: float = Field(
-        ..., description="Percentage of core request limit used"
+    request_limit: int = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "request_limit",
+            "core_request_limit",
+            "geo_request_limit",
+        ),
+        description="Maximum allowed API requests",
     )
-    geo_enabled: bool = Field(
-        ..., description="Whether geolocation features are enabled"
-    )
-    geo_request_count: int = Field(
-        ..., description="Number of geolocation requests made"
-    )
-    geo_request_limit: int = Field(
-        ..., description="Maximum allowed geolocation requests"
-    )
-    geo_usage_percent: float = Field(
-        ..., description="Percentage of geolocation request limit used"
+    usage_percent: float = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "usage_percent",
+            "core_usage_percent",
+            "geo_usage_percent",
+        ),
+        description="Percentage of request limit used",
     )
     is_active: bool = Field(..., description="Whether the account is currently active")
     message: str = Field(..., description="Account status or informational message")
@@ -210,10 +236,10 @@ class V60PostalCodeResult(BaseModel):
     geo_state: str = Field(..., alias="geoState", description="State code")
     tax_sales: float = Field(..., alias="taxSales", description="Total sales tax rate")
     tax_use: float = Field(..., alias="taxUse", description="Total use tax rate")
-    txb_service: Literal["Y", "N"] = Field(
+    txb_service: str = Field(
         ..., alias="txbService", description="Service taxability indicator"
     )
-    txb_freight: Literal["Y", "N"] = Field(
+    txb_freight: str = Field(
         ..., alias="txbFreight", description="Freight taxability indicator"
     )
     state_sales_tax: float = Field(
@@ -289,7 +315,7 @@ class V60PostalCodeResult(BaseModel):
     district5_use_tax: float = Field(
         ..., alias="district5UseTax", description="District 5 use tax rate"
     )
-    origin_destination: Literal["O", "D"] = Field(
+    origin_destination: str = Field(
         ..., alias="originDestination", description="Origin/destination indicator"
     )
 
@@ -331,4 +357,278 @@ class V60PostalCodeResponse(BaseModel):
     )
     address_detail: V60PostalCodeAddressDetail = Field(
         ..., alias="addressDetail", description="Address details for postal code lookup"
+    )
+
+
+# =============================================================================
+# TaxCloud API Models - Order Management
+# =============================================================================
+
+
+class TaxCloudAddress(BaseModel):
+    """Address structure for TaxCloud orders."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    line1: str = Field(..., description="First line of address")
+    line2: Optional[str] = Field(None, description="Second line of address")
+    city: str = Field(..., description="City or post-town")
+    state: str = Field(..., description="State abbreviation")
+    zip: str = Field(..., description="Postal or ZIP code")
+    country_code: Optional[str] = Field(
+        "US", alias="countryCode", description="ISO 3166-1 alpha-2 country code"
+    )
+
+
+class TaxCloudAddressResponse(BaseModel):
+    """Address response structure from TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    line1: str = Field(..., description="First line of address")
+    line2: Optional[str] = Field(None, description="Second line of address")
+    city: str = Field(..., description="City or post-town")
+    state: str = Field(..., description="State abbreviation")
+    zip: str = Field(..., description="Postal or ZIP code")
+    country_code: str = Field(
+        ..., alias="countryCode", description="ISO 3166-1 alpha-2 country code"
+    )
+
+
+class Tax(BaseModel):
+    """Tax calculation details for a cart item."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    amount: float = Field(..., description="Tax amount calculated for the item")
+    rate: float = Field(..., description="Tax rate applied (decimal format)")
+
+
+class RefundTax(BaseModel):
+    """Tax details for a refunded item."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    amount: float = Field(..., description="Tax amount refunded for the item")
+
+
+class Currency(BaseModel):
+    """Currency information for order."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    currency_code: Optional[str] = Field(
+        "USD", alias="currencyCode", description="ISO currency code"
+    )
+
+
+class CurrencyResponse(BaseModel):
+    """Currency response from TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    currency_code: str = Field(
+        ..., alias="currencyCode", description="ISO currency code"
+    )
+
+
+class Exemption(BaseModel):
+    """Tax exemption certificate information."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    exemption_id: Optional[str] = Field(
+        None, alias="exemptionId", description="ID of exemption certificate"
+    )
+    is_exempt: Optional[bool] = Field(
+        None, alias="isExempt", description="Whether customer is exempt from tax"
+    )
+
+
+class CartItemWithTax(BaseModel):
+    """Cart line item with tax calculation for order creation."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    index: int = Field(..., description="Position/index of item within the cart")
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the cart item"
+    )
+    price: float = Field(..., description="Unit price of the item")
+    quantity: float = Field(..., description="Quantity of the item")
+    tax: Tax = Field(..., description="Tax information for the item")
+    product_id: Optional[str] = Field(
+        None, alias="productId", description="Product ID from product catalog"
+    )
+    tic: Optional[int] = Field(0, description="Taxability Information Code")
+
+
+class CartItemWithTaxResponse(BaseModel):
+    """Cart line item response from TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    index: int = Field(..., description="Position/index of item within the cart")
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the cart item"
+    )
+    price: float = Field(..., description="Unit price of the item")
+    quantity: float = Field(..., description="Quantity of the item")
+    tax: Tax = Field(..., description="Tax information for the item")
+    tic: int = Field(..., description="Taxability Information Code")
+
+
+class CreateOrderRequest(BaseModel):
+    """Request payload for creating an order in TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    order_id: str = Field(
+        ..., alias="orderId", description="Order ID in external system"
+    )
+    customer_id: str = Field(
+        ..., alias="customerId", description="Customer ID in external system"
+    )
+    transaction_date: str = Field(
+        ...,
+        alias="transactionDate",
+        description="RFC3339 datetime string when order was purchased",
+    )
+    completed_date: str = Field(
+        ...,
+        alias="completedDate",
+        description="RFC3339 datetime string when order was shipped/completed",
+    )
+    origin: TaxCloudAddress = Field(..., description="Origin address of the order")
+    destination: TaxCloudAddress = Field(
+        ..., description="Destination address of the order"
+    )
+    line_items: List[CartItemWithTax] = Field(
+        ..., alias="lineItems", description="Array of line items in the order"
+    )
+    currency: Currency = Field(..., description="Currency information for the order")
+    channel: Optional[str] = Field(None, description="Sales channel")
+    delivered_by_seller: Optional[bool] = Field(
+        None, alias="deliveredBySeller", description="Whether seller directly delivered"
+    )
+    exclude_from_filing: Optional[bool] = Field(
+        False,
+        alias="excludeFromFiling",
+        description="Whether to exclude from tax filing",
+    )
+    exemption: Optional[Exemption] = Field(
+        None, description="Exemption certificate information"
+    )
+
+
+class OrderResponse(BaseModel):
+    """Response after successfully creating an order in TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    order_id: str = Field(
+        ..., alias="orderId", description="Order ID in external system"
+    )
+    customer_id: str = Field(
+        ..., alias="customerId", description="Customer ID in external system"
+    )
+    connection_id: str = Field(
+        ..., alias="connectionId", description="TaxCloud connection ID"
+    )
+    transaction_date: str = Field(
+        ..., alias="transactionDate", description="RFC3339 datetime string"
+    )
+    completed_date: str = Field(
+        ..., alias="completedDate", description="RFC3339 datetime string"
+    )
+    origin: TaxCloudAddressResponse = Field(..., description="Origin address")
+    destination: TaxCloudAddressResponse = Field(..., description="Destination address")
+    line_items: List[CartItemWithTaxResponse] = Field(
+        ..., alias="lineItems", description="Array of line items"
+    )
+    currency: CurrencyResponse = Field(..., description="Currency information")
+    channel: Optional[str] = Field(None, description="Sales channel")
+    delivered_by_seller: bool = Field(
+        ..., alias="deliveredBySeller", description="Whether seller directly delivered"
+    )
+    exclude_from_filing: bool = Field(
+        ..., alias="excludeFromFiling", description="Whether excluded from tax filing"
+    )
+    exemption: Optional[Exemption] = Field(None, description="Exemption information")
+
+
+class UpdateOrderRequest(BaseModel):
+    """Request payload for updating an order in TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    completed_date: str = Field(
+        ...,
+        alias="completedDate",
+        description="RFC3339 datetime string when order was shipped/completed",
+    )
+
+
+class CartItemRefundWithTaxRequest(BaseModel):
+    """Cart line item to be refunded."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the cart item to refund"
+    )
+    quantity: float = Field(..., description="Quantity of the item to refund")
+
+
+class CartItemRefundWithTaxResponse(BaseModel):
+    """Refunded cart line item response from TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    index: int = Field(..., description="Position/index of item within the cart")
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the cart item"
+    )
+    price: float = Field(..., description="Price of the refunded item")
+    quantity: float = Field(..., description="Quantity of the item refunded")
+    tax: RefundTax = Field(..., description="Tax information for the refunded item")
+    tic: Optional[int] = Field(0, description="Taxability Information Code")
+
+
+class RefundTransactionRequest(BaseModel):
+    """Request payload for creating a refund against an order in TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: Optional[List[CartItemRefundWithTaxRequest]] = Field(
+        None,
+        description="Items to refund. If empty/omitted, entire order will be refunded",
+    )
+    returned_date: Optional[str] = Field(
+        None,
+        alias="returnedDate",
+        description=(
+            "RFC3339 datetime - only include if amending previously filed return"
+        ),
+    )
+
+
+class RefundTransactionResponse(BaseModel):
+    """Response after successfully creating a refund in TaxCloud."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    connection_id: str = Field(
+        ..., alias="connectionId", description="TaxCloud connection ID"
+    )
+    created_date: str = Field(
+        ..., alias="createdDate", description="RFC3339 datetime when refund was created"
+    )
+    items: List[CartItemRefundWithTaxResponse] = Field(
+        ..., description="Array of refunded line items"
+    )
+    returned_date: Optional[str] = Field(
+        None,
+        alias="returnedDate",
+        description="RFC3339 datetime when refund took effect",
     )

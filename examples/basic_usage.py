@@ -18,12 +18,14 @@ response = client.request.GetSalesTaxByAddress(
     "200 Spectrum Center Drive, Irvine, CA 92618"
 )
 
-print(f"Address: {response.addressDetail.normalizedAddress}")
-print(f"Latitude: {response.addressDetail.geoLat}")
-print(f"Longitude: {response.addressDetail.geoLng}")
-print(f"Incorporated: {response.addressDetail.incorporated}")
-print(f"\nService Taxable: {response.service.taxable}")
-print(f"Shipping Taxable: {response.shipping.taxable}")
+print(f"Address: {response.address_detail.normalized_address}")
+print(f"Latitude: {response.address_detail.geo_lat}")
+print(f"Longitude: {response.address_detail.geo_lng}")
+print(f"Incorporated: {response.address_detail.incorporated}")
+if response.service:
+    print(f"\nService Taxable: {response.service.taxable}")
+if response.shipping:
+    print(f"Shipping Taxable: {response.shipping.taxable}")
 if response.sourcing_rules:
     print(
         f"Sourcing: {response.sourcing_rules.value} ({response.sourcing_rules.description})"
@@ -49,7 +51,7 @@ response = client.request.GetSalesTaxByGeoLocation(
     lng="-117.8386",
 )
 
-print(f"Address: {response.addressDetail.normalizedAddress}")
+print(f"Address: {response.address_detail.normalized_address}")
 
 if response.tax_summaries:
     for summary in response.tax_summaries:
@@ -62,10 +64,10 @@ print("=" * 60)
 
 response = client.request.GetSalesTaxByAddress(
     address="1 Apple Park Way, Cupertino, CA 95014",
-    historical="2024-01",
+    historical="202401",
 )
 
-print(f"Address: {response.addressDetail.normalizedAddress}")
+print(f"Address: {response.address_detail.normalized_address}")
 if response.tax_summaries:
     for summary in response.tax_summaries:
         print(f"{summary.summary_name}: {summary.rate * 100:.2f}%")
@@ -103,14 +105,9 @@ print("=" * 60)
 
 metrics = client.request.GetAccountMetrics()
 
-print(f"Core Request Count: {metrics.core_request_count:,}")
-print(f"Core Request Limit: {metrics.core_request_limit:,}")
-print(f"Core Usage: {metrics.core_usage_percent:.2f}%")
-print(f"\nGeo Enabled: {metrics.geo_enabled}")
-print(f"Geo Request Count: {metrics.geo_request_count:,}")
-print(f"Geo Request Limit: {metrics.geo_request_limit:,}")
-print(f"Geo Usage: {metrics.geo_usage_percent:.2f}%")
-print(f"\nAccount Active: {metrics.is_active}")
+print(f"Requests: {metrics.request_count:,} / {metrics.request_limit:,}")
+print(f"Usage: {metrics.usage_percent:.2f}%")
+print(f"Account Active: {metrics.is_active}")
 print(f"Message: {metrics.message}")
 
 # Always close the client when done (or use context manager)
@@ -123,7 +120,7 @@ print("=" * 60)
 
 with ZipTaxClient.api_key("your-api-key-here") as client:
     response = client.request.GetSalesTaxByAddress("123 Main St, Los Angeles, CA 90001")
-    print(f"Address: {response.addressDetail.normalizedAddress}")
+    print(f"Address: {response.address_detail.normalized_address}")
     if response.tax_summaries:
         for summary in response.tax_summaries:
             print(f"{summary.summary_name}: {summary.rate * 100:.2f}%")
