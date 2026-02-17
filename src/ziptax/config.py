@@ -112,7 +112,7 @@ class Config:
         """
         if hasattr(self, f"_{key}"):
             return getattr(self, f"_{key}")
-        return self._extra.get(key)
+        return self._extra[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set configuration value by key.

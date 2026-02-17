@@ -301,6 +301,13 @@ class TestGetRatesByPostalCode:
         with pytest.raises(ZipTaxValidationError, match="Postal code must be"):
             functions.GetRatesByPostalCode("invalid")
 
+    def test_nine_digit_postal_code_rejected(self, mock_http_client, mock_config):
+        """Test that 9-digit postal codes are rejected (API does not accept them)."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="Postal code must be"):
+            functions.GetRatesByPostalCode("92694-1234")
+
     def test_empty_postal_code(self, mock_http_client, mock_config):
         """Test validation of empty postal code."""
         functions = Functions(mock_http_client, mock_config)
@@ -478,6 +485,32 @@ class TestTaxCloudFunctions:
         assert isinstance(response, list)
         assert len(response) == 1
         mock_taxcloud_http_client.post.assert_called_once()
+
+    def test_refund_order_single_dict_response(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_refund_response,
+    ):
+        """Test that RefundOrder handles API returning a single dict (not a list)."""
+        # API sometimes returns a single dict for partial refunds
+        mock_taxcloud_http_client.post.return_value = sample_refund_response
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = RefundTransactionRequest(
+            items=[{"itemId": "item-1", "quantity": 1.0}]
+        )
+        response = functions.RefundOrder("test-order-1", request)
+
+        assert isinstance(response, list)
+        assert len(response) == 1
+        assert isinstance(response[0], RefundTransactionResponse)
+        assert response[0].connection_id == "test-connection-id-uuid"
 
     def test_create_order_without_taxcloud_config(self, mock_http_client, mock_config):
         """Test CreateOrder raises without TaxCloud config."""

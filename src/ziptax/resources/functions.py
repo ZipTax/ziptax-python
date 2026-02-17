@@ -200,8 +200,7 @@ class Functions:
         """Get sales tax rates by US postal code.
 
         Args:
-            postal_code: US postal code (5-digit or 9-digit format,
-                e.g., "92694" or "92694-1234")
+            postal_code: US postal code (5-digit format, e.g., "92694")
             format: Response format (default: "json")
 
         Returns:
@@ -475,4 +474,9 @@ class Functions:
             return self.taxcloud_http_client.post(path, json=request_body)
 
         response_data = _make_request()
+
+        # API may return a single dict or a list of dicts
+        if isinstance(response_data, dict):
+            response_data = [response_data]
+
         return [RefundTransactionResponse(**item) for item in response_data]

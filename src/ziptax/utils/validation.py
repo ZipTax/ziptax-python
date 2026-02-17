@@ -163,7 +163,7 @@ def validate_postal_code(postal_code: str) -> None:
     """Validate US postal code parameter.
 
     Args:
-        postal_code: Postal code string to validate (5-digit or 9-digit format)
+        postal_code: Postal code string to validate (5-digit format only)
 
     Raises:
         ZipTaxValidationError: If postal code is invalid
@@ -174,11 +174,11 @@ def validate_postal_code(postal_code: str) -> None:
     if not isinstance(postal_code, str):
         raise ZipTaxValidationError("Postal code must be a string")
 
-    # Pattern for 5-digit or 5+4 digit format
-    pattern = r"^[0-9]{5}(-[0-9]{4})?$"
+    # Pattern for 5-digit format only (API does not accept 9-digit codes)
+    pattern = r"^[0-9]{5}$"
 
     if not re.match(pattern, postal_code):
         raise ZipTaxValidationError(
-            f"Postal code must be in 5-digit (e.g., 92694) or "
-            f"9-digit (e.g., 92694-1234) format, got: {postal_code}"
+            f"Postal code must be in 5-digit format (e.g., 92694), "
+            f"got: {postal_code}"
         )

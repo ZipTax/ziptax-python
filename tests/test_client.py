@@ -66,6 +66,27 @@ class TestZipTaxClient:
         client.config["format"] = "json"
         assert client.config["format"] == "json"
 
+    def test_config_get_with_default(self, mock_api_key):
+        """Test config.get() returns default for missing keys."""
+        client = ZipTaxClient.api_key(mock_api_key)
+
+        # Existing key returns its value, not the default
+        assert client.config.get("timeout", 999) == 30
+
+        # Missing key returns the provided default
+        assert client.config.get("nonexistent", "fallback") == "fallback"
+        assert client.config.get("nonexistent", 42) == 42
+
+        # Missing key with no default returns None
+        assert client.config.get("nonexistent") is None
+
+    def test_config_getitem_raises_for_missing_key(self, mock_api_key):
+        """Test config[key] raises KeyError for missing keys."""
+        client = ZipTaxClient.api_key(mock_api_key)
+
+        with pytest.raises(KeyError):
+            _ = client.config["nonexistent"]
+
     def test_context_manager(self, mock_api_key):
         """Test using client as context manager."""
         with ZipTaxClient.api_key(mock_api_key) as client:
