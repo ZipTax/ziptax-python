@@ -118,7 +118,8 @@ class HTTPClient:
             ZipTaxAPIError: For API errors
         """
         url = f"{self.base_url}{path}"
-        logger.debug(f"GET {url} with params: {params}")
+        param_keys = list(params.keys()) if params else []
+        logger.debug(f"GET {path} params={param_keys}")
 
         try:
             response = self.session.get(
@@ -127,7 +128,7 @@ class HTTPClient:
                 headers=headers,
                 timeout=self.timeout,
             )
-            logger.debug(f"Response status: {response.status_code}")
+            logger.debug(f"GET {path} status={response.status_code}")
 
             if not response.ok:
                 self._handle_error_response(response)
@@ -167,7 +168,9 @@ class HTTPClient:
             ZipTaxAPIError: For API errors
         """
         url = f"{self.base_url}{path}"
-        logger.debug(f"POST {url} with json: {json}, params: {params}")
+        body_keys = list(json.keys()) if json else []
+        param_keys = list(params.keys()) if params else []
+        logger.debug(f"POST {path} body_keys={body_keys} params={param_keys}")
 
         try:
             response = self.session.post(
@@ -177,7 +180,7 @@ class HTTPClient:
                 headers=headers,
                 timeout=self.timeout,
             )
-            logger.debug(f"Response status: {response.status_code}")
+            logger.debug(f"POST {path} status={response.status_code}")
 
             if not response.ok:
                 self._handle_error_response(response)
@@ -217,7 +220,9 @@ class HTTPClient:
             ZipTaxAPIError: For API errors
         """
         url = f"{self.base_url}{path}"
-        logger.debug(f"PATCH {url} with json: {json}, params: {params}")
+        body_keys = list(json.keys()) if json else []
+        param_keys = list(params.keys()) if params else []
+        logger.debug(f"PATCH {path} body_keys={body_keys} params={param_keys}")
 
         try:
             response = self.session.patch(
@@ -227,7 +232,7 @@ class HTTPClient:
                 headers=headers,
                 timeout=self.timeout,
             )
-            logger.debug(f"Response status: {response.status_code}")
+            logger.debug(f"PATCH {path} status={response.status_code}")
 
             if not response.ok:
                 self._handle_error_response(response)

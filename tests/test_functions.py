@@ -203,6 +203,63 @@ class TestGetAccountMetrics:
         assert response.is_active is True
         assert "support@zip.tax" in response.message
 
+    def test_core_prefixed_fields(self, mock_http_client, mock_config):
+        """Test that core_* prefixed fields are accepted as aliases."""
+        mock_http_client.get.return_value = {
+            "core_request_count": 500,
+            "core_request_limit": 10000,
+            "core_usage_percent": 5.0,
+            "is_active": True,
+            "message": "OK",
+        }
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.GetAccountMetrics()
+
+        assert isinstance(response, V60AccountMetrics)
+        assert response.request_count == 500
+        assert response.request_limit == 10000
+        assert response.usage_percent == 5.0
+
+    def test_geo_prefixed_fields(self, mock_http_client, mock_config):
+        """Test that geo_* prefixed fields are accepted as aliases."""
+        mock_http_client.get.return_value = {
+            "geo_request_count": 200,
+            "geo_request_limit": 5000,
+            "geo_usage_percent": 4.0,
+            "is_active": True,
+            "message": "OK",
+        }
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.GetAccountMetrics()
+
+        assert isinstance(response, V60AccountMetrics)
+        assert response.request_count == 200
+        assert response.request_limit == 5000
+        assert response.usage_percent == 4.0
+
+    def test_flat_fields_take_priority(self, mock_http_client, mock_config):
+        """Test that flat fields are preferred when both flat and prefixed exist."""
+        mock_http_client.get.return_value = {
+            "request_count": 999,
+            "core_request_count": 111,
+            "request_limit": 50000,
+            "core_request_limit": 11111,
+            "usage_percent": 2.0,
+            "core_usage_percent": 1.0,
+            "is_active": True,
+            "message": "OK",
+        }
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.GetAccountMetrics()
+
+        assert isinstance(response, V60AccountMetrics)
+        assert response.request_count == 999
+        assert response.request_limit == 50000
+        assert response.usage_percent == 2.0
+
 
 class TestGetRatesByPostalCode:
     """Test cases for GetRatesByPostalCode function."""
@@ -457,6 +514,103 @@ class TestTaxCloudFunctions:
                     currency={"currencyCode": "USD"},
                 )
             )
+
+    def test_create_order_with_valid_address_autocomplete(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_order_response,
+    ):
+        """Test CreateOrder accepts all valid address_autocomplete values."""
+        mock_taxcloud_http_client.post.return_value = sample_order_response
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderRequest(
+            order_id="test-order-1",
+            customer_id="customer-1",
+            transaction_date="2024-01-15T09:30:00Z",
+            completed_date="2024-01-15T09:30:00Z",
+            origin={
+                "line1": "323 Washington Ave N",
+                "city": "Minneapolis",
+                "state": "MN",
+                "zip": "55401",
+            },
+            destination={
+                "line1": "323 Washington Ave N",
+                "city": "Minneapolis",
+                "state": "MN",
+                "zip": "55401",
+            },
+            line_items=[
+                {
+                    "index": 0,
+                    "itemId": "item-1",
+                    "price": 10.80,
+                    "quantity": 1.5,
+                    "tax": {"amount": 1.31, "rate": 0.0813},
+                }
+            ],
+            currency={"currencyCode": "USD"},
+        )
+
+        for value in ["none", "origin", "destination", "all"]:
+            mock_taxcloud_http_client.post.reset_mock()
+            response = functions.CreateOrder(request, address_autocomplete=value)
+            assert isinstance(response, OrderResponse)
+
+    def test_create_order_with_invalid_address_autocomplete(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+    ):
+        """Test CreateOrder raises for invalid address_autocomplete."""
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderRequest(
+            order_id="test-order-1",
+            customer_id="customer-1",
+            transaction_date="2024-01-15T09:30:00Z",
+            completed_date="2024-01-15T09:30:00Z",
+            origin={
+                "line1": "323 Washington Ave N",
+                "city": "Minneapolis",
+                "state": "MN",
+                "zip": "55401",
+            },
+            destination={
+                "line1": "323 Washington Ave N",
+                "city": "Minneapolis",
+                "state": "MN",
+                "zip": "55401",
+            },
+            line_items=[
+                {
+                    "index": 0,
+                    "itemId": "item-1",
+                    "price": 10.80,
+                    "quantity": 1.5,
+                    "tax": {"amount": 1.31, "rate": 0.0813},
+                }
+            ],
+            currency={"currencyCode": "USD"},
+        )
+
+        with pytest.raises(
+            ZipTaxValidationError,
+            match="address_autocomplete must be one of",
+        ):
+            functions.CreateOrder(request, address_autocomplete="invalid")
 
     def test_get_order_without_taxcloud_config(self, mock_http_client, mock_config):
         """Test GetOrder raises without TaxCloud config."""

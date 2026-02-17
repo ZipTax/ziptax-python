@@ -19,6 +19,7 @@ from ..utils.http import HTTPClient
 from ..utils.retry import retry_with_backoff
 from ..utils.validation import (
     validate_address,
+    validate_address_autocomplete,
     validate_coordinates,
     validate_country_code,
     validate_format,
@@ -264,6 +265,7 @@ class Functions:
             OrderResponse object with created order details
 
         Raises:
+            ZipTaxValidationError: If address_autocomplete value is invalid
             ZipTaxCloudConfigError: If TaxCloud credentials not configured
             ZipTaxAPIError: If the API returns an error
 
@@ -303,6 +305,9 @@ class Functions:
             >>> order = client.request.CreateOrder(request)
         """
         self._check_taxcloud_config()
+
+        # Validate inputs
+        validate_address_autocomplete(address_autocomplete)
 
         # Build query parameters
         params: Dict[str, Any] = {}

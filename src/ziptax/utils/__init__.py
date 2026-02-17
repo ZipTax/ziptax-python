@@ -4,6 +4,7 @@ from .http import HTTPClient
 from .retry import async_retry_with_backoff, retry_with_backoff, should_retry
 from .validation import (
     validate_address,
+    validate_address_autocomplete,
     validate_api_key,
     validate_coordinates,
     validate_country_code,
@@ -17,6 +18,7 @@ __all__ = [
     "async_retry_with_backoff",
     "should_retry",
     "validate_address",
+    "validate_address_autocomplete",
     "validate_coordinates",
     "validate_country_code",
     "validate_historical_date",

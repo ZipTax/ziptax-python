@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class JurisdictionType(str, Enum):
@@ -179,9 +179,10 @@ class V60AccountMetrics(BaseModel):
     """Account metrics by API key.
 
     The live API returns flat fields (request_count, request_limit,
-    usage_percent). The spec documents prefixed fields
-    (core_request_count, geo_request_count, etc.) which are accepted
-    as aliases for backward compatibility.
+    usage_percent). The spec also documents prefixed variants
+    (core_request_count, geo_request_count, core_request_limit,
+    geo_request_limit, core_usage_percent, geo_usage_percent) which
+    are accepted via validation_alias for backward compatibility.
 
     Attributes:
         request_count: Number of API requests made
@@ -195,17 +196,29 @@ class V60AccountMetrics(BaseModel):
 
     request_count: int = Field(
         ...,
-        alias="request_count",
+        validation_alias=AliasChoices(
+            "request_count",
+            "core_request_count",
+            "geo_request_count",
+        ),
         description="Number of API requests made",
     )
     request_limit: int = Field(
         ...,
-        alias="request_limit",
+        validation_alias=AliasChoices(
+            "request_limit",
+            "core_request_limit",
+            "geo_request_limit",
+        ),
         description="Maximum allowed API requests",
     )
     usage_percent: float = Field(
         ...,
-        alias="usage_percent",
+        validation_alias=AliasChoices(
+            "usage_percent",
+            "core_usage_percent",
+            "geo_usage_percent",
+        ),
         description="Percentage of request limit used",
     )
     is_active: bool = Field(..., description="Whether the account is currently active")

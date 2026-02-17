@@ -141,6 +141,24 @@ def validate_api_key(api_key: str) -> None:
         raise ZipTaxValidationError("API key appears to be invalid (too short)")
 
 
+def validate_address_autocomplete(address_autocomplete: str) -> None:
+    """Validate address_autocomplete parameter for TaxCloud orders.
+
+    Args:
+        address_autocomplete: Address autocomplete option to validate
+
+    Raises:
+        ZipTaxValidationError: If address_autocomplete value is invalid
+    """
+    valid_options = ["none", "origin", "destination", "all"]
+
+    if address_autocomplete not in valid_options:
+        raise ZipTaxValidationError(
+            f"address_autocomplete must be one of {valid_options}, "
+            f"got: {address_autocomplete!r}"
+        )
+
+
 def validate_postal_code(postal_code: str) -> None:
     """Validate US postal code parameter.
 
