@@ -1,7 +1,7 @@
 """Response models for the ZipTax API."""
 
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
@@ -378,7 +378,7 @@ class CartCurrency(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    currency_code: str = Field(
+    currency_code: Literal["USD"] = Field(
         ..., alias="currencyCode", description="ISO currency code (must be USD)"
     )
 
@@ -391,8 +391,12 @@ class CartLineItem(BaseModel):
     item_id: str = Field(
         ..., alias="itemId", description="Unique identifier for the line item"
     )
-    price: float = Field(..., description="Unit price of the item")
-    quantity: float = Field(..., description="Quantity of the item")
+    price: float = Field(
+        ..., gt=0, description="Unit price of the item (must be greater than 0)"
+    )
+    quantity: float = Field(
+        ..., gt=0, description="Quantity of the item (must be greater than 0)"
+    )
     taxability_code: Optional[int] = Field(
         None,
         alias="taxabilityCode",
@@ -414,7 +418,11 @@ class CartItem(BaseModel):
     )
     origin: CartAddress = Field(..., description="Origin address")
     line_items: List[CartLineItem] = Field(
-        ..., alias="lineItems", description="Array of line items in the cart"
+        ...,
+        alias="lineItems",
+        min_length=1,
+        max_length=250,
+        description="Array of line items in the cart (1-250 items)",
     )
 
 
@@ -424,7 +432,10 @@ class CalculateCartRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     items: List[CartItem] = Field(
-        ..., description="Array of cart items (must contain exactly 1 element)"
+        ...,
+        min_length=1,
+        max_length=1,
+        description="Array of cart items (must contain exactly 1 element)",
     )
 
 

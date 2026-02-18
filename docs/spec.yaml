@@ -255,7 +255,7 @@ resources:
         api: "ziptax"
         http_method: "POST"
         path: "/calculate/cart"
-        description: "Calculate sales tax for a shopping cart with multiple line items. Accepts a cart with destination and origin addresses, calculates per-item tax using the v60 tax engine, and returns tax rate and amount for each line item."
+        description: "Calculate sales tax for one or more carts with multiple line items. Accepts carts with destination and origin addresses, calculates per-item tax using the v60 tax engine, and returns tax rate and amount for each line item."
         operation_id: "calculateCart"
         parameters: []
         request_body:
@@ -269,10 +269,10 @@ resources:
           type: "header"
           header: "X-API-Key"
           format: "{apiKey}"
-          note: "Uses ZipTax API Key configured during client initialization"
+          note: "Uses ZipTax API Key configured during client initialization. See api.ziptax.authentication for canonical auth configuration."
         validation:
           cart:
-            - "Only one cart allowed per request (items array must contain exactly 1 element)"
+            - "Request must include one or more cart entries in the items array"
             - "currency.currencyCode must be 'USD'"
             - "customerId is required (string)"
             - "destination.address is required (string)"
@@ -985,10 +985,9 @@ models:
         type: "array"
         items_type: "CartItem"
         required: true
-        description: "Array of cart items (must contain exactly 1 element)"
+        description: "Array of cart items (must contain at least 1 element)"
         validation:
           min_items: 1
-          max_items: 1
 
   - name: "CartItem"
     description: "A single cart containing customer info, addresses, currency, and line items for tax calculation"
@@ -1086,7 +1085,7 @@ models:
         type: "array"
         items_type: "CartItemResponse"
         required: true
-        description: "Array of cart results (mirrors the single-element request items array)"
+        description: "Array of cart results (mirrors request items array order)"
 
   - name: "CartItemResponse"
     description: "A single cart response with calculated tax information per line item"

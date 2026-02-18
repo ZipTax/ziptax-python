@@ -1,6 +1,7 @@
 """Tests for API functions."""
 
 import pytest
+from pydantic import ValidationError
 
 from ziptax.exceptions import ZipTaxCloudConfigError, ZipTaxValidationError
 from ziptax.models import (
@@ -536,6 +537,53 @@ class TestCalculateCart:
 
         # Should use the main ZipTax http_client, not taxcloud
         mock_http_client.post.assert_called_once()
+
+    def test_price_must_be_greater_than_zero(self):
+        """Test that CartLineItem rejects price <= 0."""
+        with pytest.raises(ValidationError, match="greater than 0"):
+            CartLineItem(item_id="item-1", price=0, quantity=1.0)
+
+        with pytest.raises(ValidationError, match="greater than 0"):
+            CartLineItem(item_id="item-1", price=-5.00, quantity=1.0)
+
+    def test_quantity_must_be_greater_than_zero(self):
+        """Test that CartLineItem rejects quantity <= 0."""
+        with pytest.raises(ValidationError, match="greater than 0"):
+            CartLineItem(item_id="item-1", price=10.00, quantity=0)
+
+        with pytest.raises(ValidationError, match="greater than 0"):
+            CartLineItem(item_id="item-1", price=10.00, quantity=-1.0)
+
+    def test_items_must_contain_exactly_one_cart(self):
+        """Test that CalculateCartRequest rejects empty or multi-cart arrays."""
+        with pytest.raises(ValidationError, match="too_short"):
+            CalculateCartRequest(items=[])
+
+        cart = CartItem(
+            customer_id="cust-1",
+            currency=CartCurrency(currency_code="USD"),
+            destination=CartAddress(address="123 Main St"),
+            origin=CartAddress(address="456 Other St"),
+            line_items=[CartLineItem(item_id="item-1", price=10.00, quantity=1.0)],
+        )
+        with pytest.raises(ValidationError, match="too_long"):
+            CalculateCartRequest(items=[cart, cart])
+
+    def test_line_items_must_have_at_least_one(self):
+        """Test that CartItem rejects empty line_items."""
+        with pytest.raises(ValidationError, match="too_short"):
+            CartItem(
+                customer_id="cust-1",
+                currency=CartCurrency(currency_code="USD"),
+                destination=CartAddress(address="123 Main St"),
+                origin=CartAddress(address="456 Other St"),
+                line_items=[],
+            )
+
+    def test_currency_code_must_be_usd(self):
+        """Test that CartCurrency rejects non-USD currency codes."""
+        with pytest.raises(ValidationError, match="literal_error"):
+            CartCurrency(currency_code="EUR")
 
 
 class TestTaxCloudFunctions:
