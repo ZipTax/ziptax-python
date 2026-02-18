@@ -361,6 +361,131 @@ class V60PostalCodeResponse(BaseModel):
 
 
 # =============================================================================
+# ZipTax Cart Tax Calculation Models
+# =============================================================================
+
+
+class CartAddress(BaseModel):
+    """Simple address structure for cart tax calculation (single string format)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    address: str = Field(..., description="Full address string for geocoding")
+
+
+class CartCurrency(BaseModel):
+    """Currency information for cart request."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    currency_code: str = Field(
+        ..., alias="currencyCode", description="ISO currency code (must be USD)"
+    )
+
+
+class CartLineItem(BaseModel):
+    """A line item in the cart request with product details for tax calculation."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the line item"
+    )
+    price: float = Field(..., description="Unit price of the item")
+    quantity: float = Field(..., description="Quantity of the item")
+    taxability_code: Optional[int] = Field(
+        None,
+        alias="taxabilityCode",
+        description="Taxability code for product-specific tax rules",
+    )
+
+
+class CartItem(BaseModel):
+    """A single cart containing customer info, addresses, currency, and line items."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    customer_id: str = Field(..., alias="customerId", description="Customer identifier")
+    currency: CartCurrency = Field(
+        ..., description="Currency information (must be USD)"
+    )
+    destination: CartAddress = Field(
+        ..., description="Destination address used for tax calculation"
+    )
+    origin: CartAddress = Field(..., description="Origin address")
+    line_items: List[CartLineItem] = Field(
+        ..., alias="lineItems", description="Array of line items in the cart"
+    )
+
+
+class CalculateCartRequest(BaseModel):
+    """Request payload for calculating sales tax on a shopping cart."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: List[CartItem] = Field(
+        ..., description="Array of cart items (must contain exactly 1 element)"
+    )
+
+
+class CartTax(BaseModel):
+    """Calculated tax details for a cart line item."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    rate: float = Field(
+        ..., description="Calculated sales tax rate (rounded to 5 decimal places)"
+    )
+    amount: float = Field(
+        ...,
+        description="Calculated tax amount: (price x quantity) x rate",
+    )
+
+
+class CartLineItemResponse(BaseModel):
+    """A line item in the cart response with calculated tax rate and amount."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the line item"
+    )
+    price: float = Field(..., description="Unit price of the item")
+    quantity: float = Field(..., description="Quantity of the item")
+    tax: CartTax = Field(
+        ..., description="Calculated tax information for this line item"
+    )
+
+
+class CartItemResponse(BaseModel):
+    """A single cart response with calculated tax information per line item."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    cart_id: str = Field(
+        ...,
+        alias="cartId",
+        description="Server-generated UUID identifying this cart calculation",
+    )
+    customer_id: str = Field(..., alias="customerId", description="Customer identifier")
+    destination: CartAddress = Field(..., description="Destination address")
+    origin: CartAddress = Field(..., description="Origin address")
+    line_items: List[CartLineItemResponse] = Field(
+        ...,
+        alias="lineItems",
+        description="Array of line items with calculated tax information",
+    )
+
+
+class CalculateCartResponse(BaseModel):
+    """Response from cart tax calculation containing per-item tax details."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: List[CartItemResponse] = Field(..., description="Array of cart results")
+
+
+# =============================================================================
 # TaxCloud API Models - Order Management
 # =============================================================================
 

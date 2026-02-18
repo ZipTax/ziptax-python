@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 from ..config import Config
 from ..exceptions import ZipTaxCloudConfigError
 from ..models import (
+    CalculateCartRequest,
+    CalculateCartResponse,
     CreateOrderRequest,
     OrderResponse,
     RefundTransactionRequest,
@@ -231,6 +233,73 @@ class Functions:
 
         response_data = _make_request()
         return V60PostalCodeResponse(**response_data)
+
+    # =========================================================================
+    # ZipTax Cart Tax Calculation
+    # =========================================================================
+
+    def CalculateCart(
+        self,
+        request: CalculateCartRequest,
+    ) -> CalculateCartResponse:
+        """Calculate sales tax for a shopping cart with multiple line items.
+
+        Accepts a cart with destination and origin addresses, calculates
+        per-item tax using the v60 tax engine, and returns tax rate and
+        amount for each line item.
+
+        Args:
+            request: CalculateCartRequest object with cart details including
+                customer ID, addresses, currency, and line items
+
+        Returns:
+            CalculateCartResponse object with per-item tax calculations
+
+        Raises:
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> from ziptax.models import (
+            ...     CalculateCartRequest, CartItem, CartAddress,
+            ...     CartCurrency, CartLineItem
+            ... )
+            >>> request = CalculateCartRequest(
+            ...     items=[
+            ...         CartItem(
+            ...             customer_id="customer-453",
+            ...             currency=CartCurrency(currency_code="USD"),
+            ...             destination=CartAddress(
+            ...                 address="200 Spectrum Center Dr, Irvine, CA 92618"
+            ...             ),
+            ...             origin=CartAddress(
+            ...                 address="323 Washington Ave N, Minneapolis, MN 55401"
+            ...             ),
+            ...             line_items=[
+            ...                 CartLineItem(
+            ...                     item_id="item-1",
+            ...                     price=10.75,
+            ...                     quantity=1.5,
+            ...                 )
+            ...             ],
+            ...         )
+            ...     ]
+            ... )
+            >>> result = client.request.CalculateCart(request)
+        """
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            return self.http_client.post(
+                "/calculate/cart",
+                json=request.model_dump(by_alias=True, exclude_none=True),
+            )
+
+        response_data = _make_request()
+        return CalculateCartResponse(**response_data)
 
     # =========================================================================
     # TaxCloud API - Order Management Functions

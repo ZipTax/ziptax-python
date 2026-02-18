@@ -191,6 +191,39 @@ def sample_postal_code_response():
 
 
 @pytest.fixture
+def sample_calculate_cart_response():
+    """Sample CalculateCartResponse data for testing (matches actual API format)."""
+    return {
+        "items": [
+            {
+                "cartId": "ce4a1234-5678-90ab-cdef-1234567890ab",
+                "customerId": "customer-453",
+                "destination": {
+                    "address": "200 Spectrum Center Dr, Irvine, CA 92618-1905"
+                },
+                "origin": {
+                    "address": "323 Washington Ave N, Minneapolis, MN 55401-2427"
+                },
+                "lineItems": [
+                    {
+                        "itemId": "item-1",
+                        "price": 10.75,
+                        "quantity": 1.5,
+                        "tax": {"rate": 0.09025, "amount": 1.45528},
+                    },
+                    {
+                        "itemId": "item-2",
+                        "price": 25.00,
+                        "quantity": 2.0,
+                        "tax": {"rate": 0.09025, "amount": 4.5125},
+                    },
+                ],
+            }
+        ]
+    }
+
+
+@pytest.fixture
 def sample_order_response():
     """Sample TaxCloud OrderResponse data for testing."""
     return {

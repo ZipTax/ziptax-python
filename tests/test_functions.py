@@ -4,6 +4,12 @@ import pytest
 
 from ziptax.exceptions import ZipTaxCloudConfigError, ZipTaxValidationError
 from ziptax.models import (
+    CalculateCartRequest,
+    CalculateCartResponse,
+    CartAddress,
+    CartCurrency,
+    CartItem,
+    CartLineItem,
     CreateOrderRequest,
     OrderResponse,
     RefundTransactionRequest,
@@ -330,6 +336,206 @@ class TestGetRatesByPostalCode:
         assert result.geo_state == "CA"
         assert result.tax_sales == 0.0775
         assert result.tax_use == 0.0775
+
+
+class TestCalculateCart:
+    """Test cases for CalculateCart function."""
+
+    def _build_request(self):
+        """Build a sample CalculateCartRequest for testing."""
+        return CalculateCartRequest(
+            items=[
+                CartItem(
+                    customer_id="customer-453",
+                    currency=CartCurrency(currency_code="USD"),
+                    destination=CartAddress(
+                        address="200 Spectrum Center Dr, Irvine, CA 92618-1905"
+                    ),
+                    origin=CartAddress(
+                        address="323 Washington Ave N, Minneapolis, MN 55401-2427"
+                    ),
+                    line_items=[
+                        CartLineItem(
+                            item_id="item-1",
+                            price=10.75,
+                            quantity=1.5,
+                        ),
+                        CartLineItem(
+                            item_id="item-2",
+                            price=25.00,
+                            quantity=2.0,
+                            taxability_code=0,
+                        ),
+                    ],
+                )
+            ]
+        )
+
+    def test_basic_request(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test basic cart tax calculation request."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        assert isinstance(response, CalculateCartResponse)
+        assert len(response.items) == 1
+        assert response.items[0].cart_id == "ce4a1234-5678-90ab-cdef-1234567890ab"
+        assert response.items[0].customer_id == "customer-453"
+        mock_http_client.post.assert_called_once()
+
+    def test_request_uses_correct_path(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that CalculateCart calls the correct API path."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_http_client.post.call_args
+        assert call_args[0][0] == "/calculate/cart"
+
+    def test_request_body_serialization(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that request body uses camelCase field names (by_alias)."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_http_client.post.call_args
+        json_body = call_args[1]["json"]
+
+        # Verify top-level structure
+        assert "items" in json_body
+        assert len(json_body["items"]) == 1
+
+        cart = json_body["items"][0]
+        # Verify camelCase aliases are used
+        assert "customerId" in cart
+        assert cart["customerId"] == "customer-453"
+        assert "lineItems" in cart
+        assert len(cart["lineItems"]) == 2
+
+        # Verify line item serialization
+        line_item = cart["lineItems"][0]
+        assert "itemId" in line_item
+        assert line_item["itemId"] == "item-1"
+        assert line_item["price"] == 10.75
+        assert line_item["quantity"] == 1.5
+
+    def test_optional_taxability_code_excluded_when_none(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that taxabilityCode is excluded from JSON when not set."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = CalculateCartRequest(
+            items=[
+                CartItem(
+                    customer_id="cust-1",
+                    currency=CartCurrency(currency_code="USD"),
+                    destination=CartAddress(address="123 Main St"),
+                    origin=CartAddress(address="456 Other St"),
+                    line_items=[
+                        CartLineItem(
+                            item_id="item-1",
+                            price=10.00,
+                            quantity=1.0,
+                        )
+                    ],
+                )
+            ]
+        )
+        functions.CalculateCart(request)
+
+        call_args = mock_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        line_item = json_body["items"][0]["lineItems"][0]
+        assert "taxabilityCode" not in line_item
+
+    def test_optional_taxability_code_included_when_set(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that taxabilityCode is included in JSON when set."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        # Second line item has taxability_code=0
+        line_item = json_body["items"][0]["lineItems"][1]
+        assert "taxabilityCode" in line_item
+        assert line_item["taxabilityCode"] == 0
+
+    def test_response_line_items_parsed(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that response line items and tax details are properly parsed."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        cart = response.items[0]
+        assert len(cart.line_items) == 2
+
+        # First line item
+        item1 = cart.line_items[0]
+        assert item1.item_id == "item-1"
+        assert item1.price == 10.75
+        assert item1.quantity == 1.5
+        assert item1.tax.rate == 0.09025
+        assert item1.tax.amount == 1.45528
+
+        # Second line item
+        item2 = cart.line_items[1]
+        assert item2.item_id == "item-2"
+        assert item2.price == 25.00
+        assert item2.quantity == 2.0
+        assert item2.tax.rate == 0.09025
+        assert item2.tax.amount == 4.5125
+
+    def test_response_addresses_parsed(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that response addresses are properly parsed."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        cart = response.items[0]
+        assert (
+            cart.destination.address == "200 Spectrum Center Dr, Irvine, CA 92618-1905"
+        )
+        assert cart.origin.address == "323 Washington Ave N, Minneapolis, MN 55401-2427"
+
+    def test_uses_ziptax_http_client(
+        self, mock_http_client, mock_config, sample_calculate_cart_response
+    ):
+        """Test that CalculateCart uses the ZipTax HTTP client, not TaxCloud."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        # Should use the main ZipTax http_client, not taxcloud
+        mock_http_client.post.assert_called_once()
 
 
 class TestTaxCloudFunctions:

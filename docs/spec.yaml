@@ -250,6 +250,62 @@ resources:
           type: "V60AccountMetrics"
           is_array: false
 
+      # ZipTax Cart Tax Calculation Endpoint
+      - name: "CalculateCart"
+        api: "ziptax"
+        http_method: "POST"
+        path: "/calculate/cart"
+        description: "Calculate sales tax for a shopping cart with multiple line items. Accepts a cart with destination and origin addresses, calculates per-item tax using the v60 tax engine, and returns tax rate and amount for each line item."
+        operation_id: "calculateCart"
+        parameters: []
+        request_body:
+          type: "CalculateCartRequest"
+          description: "Cart with line items, addresses, and currency for tax calculation"
+        returns:
+          type: "CalculateCartResponse"
+          is_array: false
+          status_code: 200
+        authentication:
+          type: "header"
+          header: "X-API-Key"
+          format: "{apiKey}"
+          note: "Uses ZipTax API Key configured during client initialization"
+        validation:
+          cart:
+            - "Only one cart allowed per request (items array must contain exactly 1 element)"
+            - "currency.currencyCode must be 'USD'"
+            - "customerId is required (string)"
+            - "destination.address is required (string)"
+            - "origin.address is required (string)"
+          line_items:
+            - "Minimum: 1 line item"
+            - "Maximum: 250 line items per cart"
+            - "itemId: required (string)"
+            - "price: required (positive decimal, greater than 0)"
+            - "quantity: required (positive decimal, greater than 0, supports fractional values)"
+            - "taxabilityCode: optional (integer, passed to v60 tax engine if provided)"
+        tax_calculation:
+          formula: "taxAmount = (price x quantity) x taxRate"
+          rounding: "5 decimal places for both taxRate and taxAmount"
+          example: |
+            price = 10.75
+            quantity = 1.5
+            taxRate = 0.09025
+            taxAmount = (10.75 x 1.5) x 0.09025 = 1.45528
+        errors:
+          400:
+            - "Invalid request format"
+            - "Missing required fields"
+            - "Cart exceeds 250 line items"
+            - "More than one cart in request"
+          401:
+            - "Missing X-API-KEY header"
+            - "Invalid or inactive API key"
+          500:
+            - "Failed to calculate tax rate"
+            - "v60 API error"
+            - "Internal server error"
+
       # TaxCloud API Orders Endpoints
       - name: "CreateOrder"
         api: "taxcloud"  # Indicates this uses the TaxCloud API
@@ -917,6 +973,196 @@ models:
         required: true
         api_field: "geoLng"
         description: "Longitude (0 for postal code lookups)"
+
+  # ---------------------------------------------------------------------------
+  # ZipTax Cart Tax Calculation Models
+  # ---------------------------------------------------------------------------
+  - name: "CalculateCartRequest"
+    description: "Request payload for calculating sales tax on a shopping cart. Wraps a single cart item in an 'items' array."
+    api: "ziptax"
+    properties:
+      - name: "items"
+        type: "array"
+        items_type: "CartItem"
+        required: true
+        description: "Array of cart items (must contain exactly 1 element)"
+        validation:
+          min_items: 1
+          max_items: 1
+
+  - name: "CartItem"
+    description: "A single cart containing customer info, addresses, currency, and line items for tax calculation"
+    api: "ziptax"
+    properties:
+      - name: "customer_id"
+        type: "string"
+        required: true
+        api_field: "customerId"
+        description: "Customer identifier"
+        example: "customer-453"
+      - name: "currency"
+        type: "CartCurrency"
+        required: true
+        description: "Currency information (must be USD)"
+      - name: "destination"
+        type: "CartAddress"
+        required: true
+        description: "Destination address used for tax calculation"
+      - name: "origin"
+        type: "CartAddress"
+        required: true
+        description: "Origin address (stored but not used for tax calculation currently)"
+      - name: "line_items"
+        type: "array"
+        items_type: "CartLineItem"
+        required: true
+        api_field: "lineItems"
+        description: "Array of line items in the cart (1-250 items)"
+        validation:
+          min_items: 1
+          max_items: 250
+
+  - name: "CartAddress"
+    description: "Simple address structure for cart tax calculation (single string format)"
+    api: "ziptax"
+    properties:
+      - name: "address"
+        type: "string"
+        required: true
+        description: "Full address string for geocoding"
+        example: "200 Spectrum Center Dr, Irvine, CA 92618-1905"
+
+  - name: "CartCurrency"
+    description: "Currency information for cart request"
+    api: "ziptax"
+    properties:
+      - name: "currency_code"
+        type: "string"
+        required: true
+        api_field: "currencyCode"
+        description: "ISO currency code (must be USD)"
+        enum: ["USD"]
+        example: "USD"
+
+  - name: "CartLineItem"
+    description: "A line item in the cart request with product details for tax calculation"
+    api: "ziptax"
+    properties:
+      - name: "item_id"
+        type: "string"
+        required: true
+        api_field: "itemId"
+        description: "Unique identifier for the line item"
+        example: "item-1"
+      - name: "price"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Unit price of the item (must be positive, greater than 0)"
+        example: 10.75
+        validation:
+          exclusive_minimum: 0
+      - name: "quantity"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Quantity of the item (must be positive, greater than 0, supports fractional values for items sold by weight)"
+        example: 1.5
+        validation:
+          exclusive_minimum: 0
+      - name: "taxability_code"
+        type: "integer"
+        format: "int64"
+        required: false
+        api_field: "taxabilityCode"
+        description: "Taxability code for product-specific tax rules (passed to v60 tax engine if provided)"
+        example: 0
+
+  - name: "CalculateCartResponse"
+    description: "Response from cart tax calculation containing per-item tax details"
+    api: "ziptax"
+    properties:
+      - name: "items"
+        type: "array"
+        items_type: "CartItemResponse"
+        required: true
+        description: "Array of cart results (mirrors the single-element request items array)"
+
+  - name: "CartItemResponse"
+    description: "A single cart response with calculated tax information per line item"
+    api: "ziptax"
+    properties:
+      - name: "cart_id"
+        type: "string"
+        format: "uuid"
+        required: true
+        api_field: "cartId"
+        description: "Server-generated UUID identifying this cart calculation"
+        example: "ce4a...ccefdd"
+      - name: "customer_id"
+        type: "string"
+        required: true
+        api_field: "customerId"
+        description: "Customer identifier (echoed from request)"
+        example: "customer-453"
+      - name: "destination"
+        type: "CartAddress"
+        required: true
+        description: "Destination address (echoed from request)"
+      - name: "origin"
+        type: "CartAddress"
+        required: true
+        description: "Origin address (echoed from request)"
+      - name: "line_items"
+        type: "array"
+        items_type: "CartLineItemResponse"
+        required: true
+        api_field: "lineItems"
+        description: "Array of line items with calculated tax information"
+
+  - name: "CartLineItemResponse"
+    description: "A line item in the cart response with calculated tax rate and amount"
+    api: "ziptax"
+    properties:
+      - name: "item_id"
+        type: "string"
+        required: true
+        api_field: "itemId"
+        description: "Unique identifier for the line item (echoed from request)"
+        example: "item-1"
+      - name: "price"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Unit price of the item (echoed from request)"
+        example: 10.75
+      - name: "quantity"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Quantity of the item (echoed from request)"
+        example: 1.5
+      - name: "tax"
+        type: "CartTax"
+        required: true
+        description: "Calculated tax information for this line item"
+
+  - name: "CartTax"
+    description: "Calculated tax details for a cart line item"
+    api: "ziptax"
+    properties:
+      - name: "rate"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Calculated sales tax rate (rounded to 5 decimal places)"
+        example: 0.09025
+      - name: "amount"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Calculated tax amount: (price x quantity) x rate (rounded to 5 decimal places)"
+        example: 1.45528
 
   # ---------------------------------------------------------------------------
   # TaxCloud API Models - Order Management
@@ -1863,6 +2109,59 @@ actual_api_responses:
           "geoLat": 0,
           "geoLng": 0
         }
+      }
+
+  calculate_cart:
+    description: "Actual ZipTax response for CalculateCart"
+    endpoint: "POST /calculate/cart"
+    request_example: |
+      {
+        "items": [
+          {
+            "currency": { "currencyCode": "USD" },
+            "customerId": "customer-453",
+            "destination": {
+              "address": "200 Spectrum Center Dr, Irvine, CA 92618-1905"
+            },
+            "origin": {
+              "address": "323 Washington Ave N, Minneapolis, MN 55401-2427"
+            },
+            "lineItems": [
+              {
+                "itemId": "item-1",
+                "price": 10.75,
+                "quantity": 1.5,
+                "taxabilityCode": 0
+              }
+            ]
+          }
+        ]
+      }
+    response_example: |
+      {
+        "items": [
+          {
+            "cartId": "ce4a...ccefdd",
+            "customerId": "customer-453",
+            "destination": {
+              "address": "200 Spectrum Center Dr, Irvine, CA 92618-1905"
+            },
+            "origin": {
+              "address": "323 Washington Ave N, Minneapolis, MN 55401-2427"
+            },
+            "lineItems": [
+              {
+                "itemId": "item-1",
+                "price": 10.75,
+                "quantity": 1.5,
+                "tax": {
+                  "rate": 0.09025,
+                  "amount": 1.46
+                }
+              }
+            ]
+          }
+        ]
       }
 
   taxcloud_create_order:
