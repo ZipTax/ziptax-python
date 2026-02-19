@@ -9,6 +9,7 @@ Official Python SDK for the [Ziptax API](https://zip-tax.com) - Get accurate sal
 
 ### Core Features (ZipTax API)
 - 🚀 Simple and intuitive API
+- 🛒 Cart tax calculation with automatic origin/destination sourcing
 - 🔄 Automatic retry logic with exponential backoff
 - ✅ Input validation
 - 🔍 Type hints for better IDE support
@@ -146,6 +147,86 @@ print(f"Requests: {metrics.request_count:,} / {metrics.request_limit:,}")
 print(f"Usage: {metrics.usage_percent:.2f}%")
 print(f"Account Active: {metrics.is_active}")
 print(f"Message: {metrics.message}")
+```
+
+### Calculate Cart Tax
+
+Calculate sales tax for a shopping cart with multiple line items. The SDK automatically resolves origin/destination sourcing rules before sending the request to the API.
+
+```python
+from ziptax.models import (
+    CalculateCartRequest,
+    CartItem,
+    CartAddress,
+    CartCurrency,
+    CartLineItem,
+)
+
+# Build the cart request
+request = CalculateCartRequest(
+    items=[
+        CartItem(
+            customer_id="customer-453",
+            currency=CartCurrency(currency_code="USD"),
+            destination=CartAddress(
+                address="200 Spectrum Center Dr, Irvine, CA 92618"
+            ),
+            origin=CartAddress(
+                address="323 Washington Ave N, Minneapolis, MN 55401"
+            ),
+            line_items=[
+                CartLineItem(
+                    item_id="item-1",
+                    price=10.75,
+                    quantity=1.5,
+                ),
+                CartLineItem(
+                    item_id="item-2",
+                    price=25.00,
+                    quantity=2.0,
+                    taxability_code=0,
+                ),
+            ],
+        )
+    ]
+)
+
+# Calculate tax
+result = client.request.CalculateCart(request)
+
+# Access results
+cart = result.items[0]
+print(f"Cart ID: {cart.cart_id}")
+for item in cart.line_items:
+    print(f"  {item.item_id}: rate={item.tax.rate}, amount=${item.tax.amount:.2f}")
+```
+
+#### Origin/Destination Sourcing
+
+The SDK automatically determines whether to use origin-based or destination-based tax rates:
+
+- **Interstate** (different states): Uses the destination address
+- **Intrastate, destination-based** (e.g., CA, NY): Uses the destination address
+- **Intrastate, origin-based** (e.g., TX, OH): Uses the origin address
+
+This is handled transparently -- the SDK looks up both addresses via `GetSalesTaxByAddress`, checks the `sourcingRules.value` field, and sends the correct address to the cart API.
+
+#### Validation
+
+The cart models enforce constraints at construction time via Pydantic:
+
+- `items` must contain exactly 1 cart
+- `line_items` must contain 1-250 items
+- `price` and `quantity` must be greater than 0
+- `currency_code` must be `"USD"`
+
+```python
+from pydantic import ValidationError
+
+try:
+    CartLineItem(item_id="item-1", price=-5.00, quantity=1.0)
+except ValidationError as e:
+    print(e)  # price must be greater than 0
 ```
 
 ## TaxCloud Order Management
@@ -522,6 +603,7 @@ API endpoint functions accessible via `client.request`.
 - `GetSalesTaxByGeoLocation(lat, lng, **kwargs)` - Get tax rates by coordinates
 - `GetRatesByPostalCode(postal_code, **kwargs)` - Get tax rates by US postal code
 - `GetAccountMetrics(**kwargs)` - Get account usage metrics
+- `CalculateCart(request)` - Calculate sales tax for a shopping cart with origin/destination sourcing
 
 #### TaxCloud API Methods (Optional)
 

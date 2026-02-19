@@ -1,6 +1,7 @@
 """API functions for the ZipTax SDK."""
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from ..config import Config
@@ -238,15 +239,116 @@ class Functions:
     # ZipTax Cart Tax Calculation
     # =========================================================================
 
+    @staticmethod
+    def _extract_state_from_normalized_address(normalized_address: str) -> str:
+        """Extract the US state abbreviation from a V60 normalized address.
+
+        The V60 API returns normalized addresses in the format:
+        "200 Spectrum Center Dr, Irvine, CA 92618-5003, United States"
+
+        This method extracts the two-letter state abbreviation (e.g., "CA")
+        from that format.
+
+        Args:
+            normalized_address: Normalized address string from
+                V60Response.addressDetail.normalizedAddress
+
+        Returns:
+            Two-letter uppercase state abbreviation (e.g., "CA", "TX")
+
+        Raises:
+            ValueError: If the state cannot be parsed from the address
+        """
+        # Match a two-letter state code followed by a ZIP code pattern
+        # e.g., "Irvine, CA 92618-5003, United States"
+        match = re.search(r",\s+([A-Z]{2})\s+\d{5}", normalized_address)
+        if match:
+            return match.group(1)
+
+        raise ValueError(
+            f"Could not extract state from normalized address: "
+            f"'{normalized_address}'"
+        )
+
+    def _resolve_sourcing_address(
+        self,
+        origin_address: str,
+        destination_address: str,
+    ) -> str:
+        """Resolve which address to use for tax calculation based on sourcing rules.
+
+        Uses the V60 API to look up both addresses, extracts the state from
+        each normalized address, and applies origin/destination sourcing logic:
+
+        - Interstate (different states): use destination address (skip sourcing)
+        - Intrastate (same state), destination-based ("D"): use destination address
+        - Intrastate (same state), origin-based ("O"): use origin address
+
+        Args:
+            origin_address: The seller/shipper address string
+            destination_address: The buyer/recipient address string
+
+        Returns:
+            The address string to use for tax calculation
+
+        Raises:
+            ZipTaxAPIError: If the V60 API returns an error
+            ValueError: If state cannot be parsed from a normalized address
+        """
+        # Step 1: Look up both addresses via the V60 API
+        destination_v60 = self.GetSalesTaxByAddress(destination_address)
+        origin_v60 = self.GetSalesTaxByAddress(origin_address)
+
+        # Step 2: Extract states from normalized addresses
+        dest_state = self._extract_state_from_normalized_address(
+            destination_v60.address_detail.normalized_address
+        )
+        origin_state = self._extract_state_from_normalized_address(
+            origin_v60.address_detail.normalized_address
+        )
+
+        logger.debug(
+            f"Sourcing resolution: origin_state={origin_state}, "
+            f"dest_state={dest_state}"
+        )
+
+        # Step 3: Interstate — always use destination
+        if dest_state != origin_state:
+            logger.debug("Interstate transaction — using destination address for rates")
+            return destination_address
+
+        # Step 4: Intrastate — check sourcingRules.value from destination lookup
+        sourcing_value = None
+        if destination_v60.sourcing_rules:
+            sourcing_value = destination_v60.sourcing_rules.value
+
+        if sourcing_value == "O":
+            logger.debug("Origin-based sourcing state — using origin address for rates")
+            return origin_address
+
+        # Default to destination (covers "D" and any unexpected value)
+        logger.debug(
+            "Destination-based sourcing state — using destination address for rates"
+        )
+        return destination_address
+
     def CalculateCart(
         self,
         request: CalculateCartRequest,
     ) -> CalculateCartResponse:
         """Calculate sales tax for a shopping cart with multiple line items.
 
-        Accepts a cart with destination and origin addresses, calculates
-        per-item tax using the v60 tax engine, and returns tax rate and
-        amount for each line item.
+        Resolves origin/destination sourcing rules automatically, then sends
+        the cart to the API for tax calculation using the correct address.
+
+        The sourcing resolution logic:
+        1. Looks up both origin and destination addresses via GetSalesTaxByAddress
+        2. Extracts and compares states from normalized addresses
+        3. Interstate (different states): uses destination address
+        4. Intrastate (same state): checks sourcingRules.value from the
+           destination lookup — if "O", uses origin address; otherwise
+           uses destination address
+        5. Sends the resolved address to POST /calculate/cart
 
         Args:
             request: CalculateCartRequest object with cart details including
@@ -257,6 +359,7 @@ class Functions:
 
         Raises:
             ZipTaxAPIError: If the API returns an error
+            ValueError: If state cannot be parsed from a normalized address
 
         Example:
             >>> from ziptax.models import (
@@ -286,6 +389,19 @@ class Functions:
             ... )
             >>> result = client.request.CalculateCart(request)
         """
+        cart = request.items[0]
+
+        # Resolve which address should be used for tax calculation
+        resolved_address = self._resolve_sourcing_address(
+            origin_address=cart.origin.address,
+            destination_address=cart.destination.address,
+        )
+
+        # Build the request payload, overriding both addresses with the
+        # resolved address so the API calculates using the correct rates
+        request_data = request.model_dump(by_alias=True, exclude_none=True)
+        request_data["items"][0]["destination"]["address"] = resolved_address
+        request_data["items"][0]["origin"]["address"] = resolved_address
 
         # Make request with retry logic
         @retry_with_backoff(
@@ -295,7 +411,7 @@ class Functions:
         def _make_request() -> Dict[str, Any]:
             return self.http_client.post(
                 "/calculate/cart",
-                json=request.model_dump(by_alias=True, exclude_none=True),
+                json=request_data,
             )
 
         response_data = _make_request()

@@ -272,7 +272,7 @@ resources:
           note: "Uses ZipTax API Key configured during client initialization. See api.ziptax.authentication for canonical auth configuration."
         validation:
           cart:
-            - "Request must include one or more cart entries in the items array"
+            - "items array must contain exactly 1 cart element"
             - "currency.currencyCode must be 'USD'"
             - "customerId is required (string)"
             - "destination.address is required (string)"
@@ -284,14 +284,100 @@ resources:
             - "price: required (positive decimal, greater than 0)"
             - "quantity: required (positive decimal, greater than 0, supports fractional values)"
             - "taxabilityCode: optional (integer, passed to v60 tax engine if provided)"
+        origin_destination_sourcing:
+          description: |
+            Determines whether sales tax should be calculated using the
+            origin (shipper) address or the destination (recipient) address,
+            based on the state's sourcing rules. The SDK resolves the
+            correct address automatically, then sends it to the cart API
+            for tax calculation.
+          concept: |
+            US states follow either origin-based or destination-based
+            sourcing rules. Origin-based states (e.g., TX, OH, PA) collect
+            tax based on the seller's location. Destination-based states
+            (e.g., CA, NY, FL) collect tax based on the buyer's location.
+            The v60 API exposes this via sourcingRules.value ("O" or "D")
+            in its response.
+          sdk_approach: |
+            The SDK resolves the correct address, then delegates tax
+            calculation to the API. It does NOT calculate tax locally.
+            Flow: SDK calls GetSalesTaxByAddress to determine which
+            address to use → overrides both origin and destination in the
+            cart request with the resolved address → sends the modified
+            request to POST /calculate/cart for the API to calculate.
+          state_parsing: |
+            The SDK always calls GetSalesTaxByAddress for both the origin
+            and destination addresses to obtain normalized addresses from
+            the V60 API. It does NOT attempt heuristic/regex parsing of
+            the raw input strings. The state is extracted from the
+            V60Response.addressDetail.normalizedAddress field using a
+            regex pattern matching ", XX NNNNN" (two-letter state code
+            followed by a 5-digit ZIP code).
+          resolution_steps:
+            - step: 1
+              action: "Look up both addresses via the V60 API"
+              detail: |
+                Always call GetSalesTaxByAddress for both the destination
+                and origin addresses. Extract the state abbreviation from
+                each V60Response.addressDetail.normalizedAddress field.
+            - step: 2
+              action: "Compare states to determine intrastate vs interstate"
+              detail: |
+                If the origin and destination states differ (interstate
+                transaction), skip sourcing resolution entirely and use the
+                destination address for the cart API call.
+            - step: 3
+              action: "For intrastate: check sourcingRules.value from the destination lookup"
+              detail: |
+                If sourcingRules.value == "D" (destination-based):
+                  - Use the destination address for the cart API call.
+                If sourcingRules.value == "O" (origin-based):
+                  - Use the origin address for the cart API call.
+            - step: 4
+              action: "Send resolved address to POST /calculate/cart"
+              detail: |
+                Override both the origin and destination addresses in the
+                cart request payload with the resolved address, then POST
+                to /calculate/cart. The API performs the actual tax
+                calculation using the resolved address's rates.
+          interstate_behavior: |
+            When the origin and destination states differ (interstate
+            transaction), sourcing resolution is skipped. The SDK always
+            uses the destination address for interstate transactions,
+            regardless of sourcingRules.value.
+          v60_fields_used:
+            - field: "sourcingRules.value"
+              values: ["O", "D"]
+              description: "'O' = origin-based taxation, 'D' = destination-based taxation"
+            - field: "addressDetail.normalizedAddress"
+              description: "Always used to extract the state (no heuristic fallback)"
+            - field: "taxSummaries[].rate"
+              description: "The tax rate the API applies to line items (via POST /calculate/cart)"
         tax_calculation:
           formula: "taxAmount = (price x quantity) x taxRate"
           rounding: "5 decimal places for both taxRate and taxAmount"
+          note: |
+            Tax calculation is performed by the API via POST /calculate/cart,
+            not by the SDK locally. The SDK's role is to resolve the correct
+            address and pass it to the API.
           example: |
             price = 10.75
             quantity = 1.5
             taxRate = 0.09025
             taxAmount = (10.75 x 1.5) x 0.09025 = 1.45528
+          origin_destination_example: |
+            Scenario: Seller in TX (origin-based state), buyer in TX (intrastate)
+            1. SDK calls GetSalesTaxByAddress for both addresses
+            2. Both resolve to TX → intrastate
+            3. Destination lookup returns sourcingRules.value = "O"
+            4. SDK overrides both addresses with origin "123 Main St, Dallas, TX 75201"
+            5. SDK POSTs to /calculate/cart → API calculates using origin rates
+
+            Scenario: Seller in MN, buyer in CA (interstate)
+            1. SDK calls GetSalesTaxByAddress for both addresses
+            2. States differ (MN vs CA) → interstate, skip sourcing
+            3. SDK overrides both addresses with destination "200 Spectrum Center Dr, Irvine, CA 92618"
+            4. SDK POSTs to /calculate/cart → API calculates using destination rates
         errors:
           400:
             - "Invalid request format"
@@ -985,9 +1071,10 @@ models:
         type: "array"
         items_type: "CartItem"
         required: true
-        description: "Array of cart items (must contain at least 1 element)"
+        description: "Array of cart items (must contain exactly 1 element)"
         validation:
           min_items: 1
+          max_items: 1
 
   - name: "CartItem"
     description: "A single cart containing customer info, addresses, currency, and line items for tax calculation"
@@ -1010,7 +1097,7 @@ models:
       - name: "origin"
         type: "CartAddress"
         required: true
-        description: "Origin address (stored but not used for tax calculation currently)"
+        description: "Origin address (used for origin/destination sourcing resolution)"
       - name: "line_items"
         type: "array"
         items_type: "CartLineItem"

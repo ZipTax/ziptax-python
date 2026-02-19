@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1-beta] - 2025-02-19
+
+### Added
+- **Cart Tax Calculation**: `CalculateCart()` function for calculating sales tax on shopping carts
+  - Accepts a `CalculateCartRequest` with customer info, addresses, currency, and line items
+  - Sends cart to `POST /calculate/cart` on the ZipTax API
+  - Returns per-item tax rate and amount via `CalculateCartResponse`
+- **Origin/Destination Sourcing**: Automatic tax sourcing resolution in `CalculateCart()`
+  - Looks up both origin and destination addresses via `GetSalesTaxByAddress`
+  - Extracts state from V60 normalized addresses to determine intrastate vs interstate
+  - Interstate transactions: uses destination address (sourcing skipped)
+  - Intrastate transactions: checks `sourcingRules.value` — uses origin address for "O", destination for "D"
+  - Overrides both addresses in the cart payload with the resolved address before sending to the API
+- **9 New Pydantic Models** for cart tax calculation:
+  - Request models: `CalculateCartRequest`, `CartItem`, `CartAddress`, `CartCurrency`, `CartLineItem`
+  - Response models: `CalculateCartResponse`, `CartItemResponse`, `CartLineItemResponse`, `CartTax`
+- **Pydantic Validation** on cart models:
+  - `CartLineItem.price` and `quantity`: must be greater than 0 (`gt=0`)
+  - `CalculateCartRequest.items`: exactly 1 element (`min_length=1, max_length=1`)
+  - `CartItem.line_items`: 1-250 elements (`min_length=1, max_length=250`)
+  - `CartCurrency.currency_code`: must be `"USD"` (`Literal["USD"]`)
+- **Internal Helpers**:
+  - `_extract_state_from_normalized_address()`: parses state from V60 normalized address format
+  - `_resolve_sourcing_address()`: resolves which address to use for tax calculation
+- **Test Coverage**: 122 tests with 96% code coverage
+  - `TestExtractStateFromNormalizedAddress`: 5 tests for state parsing
+  - `TestResolveSourcingAddress`: 4 tests for sourcing resolution
+  - `TestCalculateCart`: 16 tests for cart calculation, sourcing integration, and validation
+- **Documentation**:
+  - CalculateCart usage guide with code examples in README.md
+  - Origin/destination sourcing explanation in README.md
+  - Cart endpoint specification in `docs/spec.yaml`
+  - Actual API request/response examples in spec
+
+### Changed
+- Version bumped from `0.2.0-beta` to `0.2.1-beta`
+
+### Technical Details
+- Cart calculation uses the ZipTax HTTP client (not TaxCloud) with `X-API-Key` authentication
+- Sourcing resolution always calls the V60 API for both addresses (no heuristic parsing)
+- Request bodies serialized with `model_dump(by_alias=True, exclude_none=True)` for camelCase API fields
+- `taxabilityCode` is optional and excluded from the payload when not set
+- All quality checks pass: black, ruff, mypy, pytest with 96% coverage
+
 ## [0.2.0-beta] - 2025-02-16
 
 ### Added
