@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ziptax-sdk"
-version = "0.2.0-beta"
+version = "0.2.1-beta"
 description = "Official Python SDK for the Ziptax API"
 readme = "README.md"
 requires-python = ">=3.8"

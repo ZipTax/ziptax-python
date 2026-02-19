@@ -9,7 +9,7 @@
 project:
   name: "ziptax-sdk"
   language: "python"
-  version: "0.2.0-beta"
+  version: "0.2.1-beta"
   description: "Official Python SDK for the ZipTax API with optional TaxCloud order management support"
 
   # Repository information
