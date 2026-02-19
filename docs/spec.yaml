@@ -255,7 +255,7 @@ resources:
         api: "ziptax"
         http_method: "POST"
         path: "/calculate/cart"
-        description: "Calculate sales tax for one or more carts with multiple line items. Accepts carts with destination and origin addresses, calculates per-item tax using the v60 tax engine, and returns tax rate and amount for each line item."
+        description: "Calculate sales tax for a single cart with multiple line items. Accepts a cart with destination and origin addresses, calculates per-item tax using the v60 tax engine, and returns tax rate and amount for each line item."
         operation_id: "calculateCart"
         parameters: []
         request_body:
