@@ -151,7 +151,10 @@ print(f"Message: {metrics.message}")
 
 ### Calculate Cart Tax
 
-Calculate sales tax for a shopping cart with multiple line items. The API handles origin/destination sourcing resolution internally.
+Calculate sales tax for a shopping cart with multiple line items. `CalculateCart` uses **dual-routing**: when TaxCloud credentials are configured on the client, the request is automatically routed to the TaxCloud API; otherwise it is sent to the ZipTax API. The input is the same `CalculateCartRequest` in both cases, but the response type differs:
+
+- **Without TaxCloud credentials** -- returns a `CalculateCartResponse` (ZipTax API)
+- **With TaxCloud credentials** -- returns a `TaxCloudCalculateCartResponse` (TaxCloud API)
 
 ```python
 from ziptax.models import (
@@ -191,7 +194,7 @@ request = CalculateCartRequest(
     ]
 )
 
-# Calculate tax
+# Calculate tax (routes to ZipTax or TaxCloud based on client config)
 result = client.request.CalculateCart(request)
 
 # Access results

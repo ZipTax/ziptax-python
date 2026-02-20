@@ -199,7 +199,7 @@ def parse_address_string(address: str) -> Dict[str, str]:
         address: Full address string to parse
 
     Returns:
-        Dictionary with keys: line1, city, state, zip
+        Dictionary with keys: line1, city, state, zip, countryCode
 
     Raises:
         ZipTaxValidationError: If the address cannot be parsed into
@@ -246,4 +246,5 @@ def parse_address_string(address: str) -> Dict[str, str]:
         "city": city,
         "state": state,
         "zip": zip_code,
+        "countryCode": "US",
     }

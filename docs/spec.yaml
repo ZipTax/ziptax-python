@@ -1295,7 +1295,7 @@ models:
         example: "25eb9b97-5acb-492d-b720-c03e79cf715a"
       - name: "items"
         type: "array"
-        items_type: "TaxCloudCartResponse"
+        items_type: "TaxCloudCartItemResponse"
         required: true
         description: "Array of cart results with calculated tax information"
       - name: "transaction_date"
@@ -1306,7 +1306,7 @@ models:
         description: "RFC3339 datetime string the cart was calculated for"
         example: "2024-01-15T09:30:00Z"
 
-  - name: "TaxCloudCartResponse"
+  - name: "TaxCloudCartItemResponse"
     description: "A single cart response from TaxCloud with calculated tax information per line item"
     api: "taxcloud"
     properties:
