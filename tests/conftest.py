@@ -224,6 +224,59 @@ def sample_calculate_cart_response():
 
 
 @pytest.fixture
+def sample_taxcloud_calculate_cart_response():
+    """Sample TaxCloudCalculateCartResponse data for testing."""
+    return {
+        "connectionId": "test-connection-id-uuid",
+        "items": [
+            {
+                "cartId": "ce4a1234-5678-90ab-cdef-1234567890ab",
+                "customerId": "customer-453",
+                "currency": {"currencyCode": "USD"},
+                "deliveredBySeller": False,
+                "destination": {
+                    "line1": "200 Spectrum Center Dr",
+                    "city": "Irvine",
+                    "state": "CA",
+                    "zip": "92618-1905",
+                    "countryCode": "US",
+                },
+                "origin": {
+                    "line1": "323 Washington Ave N",
+                    "city": "Minneapolis",
+                    "state": "MN",
+                    "zip": "55401-2427",
+                    "countryCode": "US",
+                },
+                "exemption": {
+                    "exemptionId": None,
+                    "isExempt": None,
+                },
+                "lineItems": [
+                    {
+                        "index": 0,
+                        "itemId": "item-1",
+                        "price": 10.75,
+                        "quantity": 1.5,
+                        "tax": {"amount": 1.46, "rate": 0.0903},
+                        "tic": 0,
+                    },
+                    {
+                        "index": 1,
+                        "itemId": "item-2",
+                        "price": 25.00,
+                        "quantity": 2.0,
+                        "tax": {"amount": 4.52, "rate": 0.0903},
+                        "tic": 0,
+                    },
+                ],
+            }
+        ],
+        "transactionDate": "2024-01-15T09:30:00Z",
+    }
+
+
+@pytest.fixture
 def sample_order_response():
     """Sample TaxCloud OrderResponse data for testing."""
     return {

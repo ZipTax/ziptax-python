@@ -497,6 +497,86 @@ class CalculateCartResponse(BaseModel):
 
 
 # =============================================================================
+# TaxCloud Cart Tax Calculation Models
+# =============================================================================
+
+
+class TaxCloudCartLineItemResponse(BaseModel):
+    """A line item in the TaxCloud cart response with calculated tax details."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    index: int = Field(
+        ..., description="Position/index of item within the cart (0-based)"
+    )
+    item_id: str = Field(
+        ..., alias="itemId", description="Unique identifier for the line item"
+    )
+    price: float = Field(..., description="Unit price of the item")
+    quantity: float = Field(..., description="Quantity of the item")
+    tax: "Tax" = Field(..., description="Calculated tax information for this line item")
+    tic: Optional[int] = Field(
+        None, description="Taxability Information Code (mapped from taxabilityCode)"
+    )
+
+
+class TaxCloudCartItemResponse(BaseModel):
+    """A single cart response from TaxCloud with calculated tax information."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    cart_id: str = Field(
+        ...,
+        alias="cartId",
+        description="ID representing this cart calculation",
+    )
+    customer_id: str = Field(..., alias="customerId", description="Customer identifier")
+    currency: "CurrencyResponse" = Field(..., description="Currency information")
+    delivered_by_seller: bool = Field(
+        ...,
+        alias="deliveredBySeller",
+        description="Whether the seller directly delivered the order",
+    )
+    destination: "TaxCloudAddressResponse" = Field(
+        ..., description="Destination address (structured format)"
+    )
+    origin: "TaxCloudAddressResponse" = Field(
+        ..., description="Origin address (structured format)"
+    )
+    exemption: "Exemption" = Field(..., description="Exemption information")
+    line_items: List["TaxCloudCartLineItemResponse"] = Field(
+        ...,
+        alias="lineItems",
+        description="Array of line items with calculated tax information",
+    )
+
+
+class TaxCloudCalculateCartResponse(BaseModel):
+    """Response from TaxCloud cart tax calculation.
+
+    Returned by CalculateCart when the client is configured with TaxCloud
+    credentials. Contains the connectionId, transactionDate, and an array
+    of cart results with TaxCloud-style structured addresses and line items.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    connection_id: str = Field(
+        ...,
+        alias="connectionId",
+        description="TaxCloud Connection ID used for this cart calculation",
+    )
+    items: List[TaxCloudCartItemResponse] = Field(
+        ..., description="Array of cart results with calculated tax information"
+    )
+    transaction_date: str = Field(
+        ...,
+        alias="transactionDate",
+        description="RFC3339 datetime string the cart was calculated for",
+    )
+
+
+# =============================================================================
 # TaxCloud API Models - Order Management
 # =============================================================================
 

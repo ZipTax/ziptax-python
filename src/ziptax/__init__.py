@@ -55,6 +55,9 @@ from .models import (
     Tax,
     TaxCloudAddress,
     TaxCloudAddressResponse,
+    TaxCloudCalculateCartResponse,
+    TaxCloudCartItemResponse,
+    TaxCloudCartLineItemResponse,
     TaxType,
     UpdateOrderRequest,
     V60AccountMetrics,
@@ -119,6 +122,10 @@ __all__ = [
     "CartLineItem",
     "CartLineItemResponse",
     "CartTax",
+    # TaxCloud Cart Models
+    "TaxCloudCalculateCartResponse",
+    "TaxCloudCartItemResponse",
+    "TaxCloudCartLineItemResponse",
     # TaxCloud Models
     "TaxCloudAddress",
     "TaxCloudAddressResponse",

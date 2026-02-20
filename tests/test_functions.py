@@ -15,6 +15,7 @@ from ziptax.models import (
     OrderResponse,
     RefundTransactionRequest,
     RefundTransactionResponse,
+    TaxCloudCalculateCartResponse,
     UpdateOrderRequest,
     V60AccountMetrics,
     V60PostalCodeResponse,
@@ -598,6 +599,509 @@ class TestCalculateCart:
         """Test that CartCurrency rejects non-USD currency codes."""
         with pytest.raises(ValidationError, match="literal_error"):
             CartCurrency(currency_code="EUR")
+
+
+class TestCalculateCartTaxCloudRouting:
+    """Test cases for CalculateCart TaxCloud routing."""
+
+    def _build_request(self):
+        """Build a sample CalculateCartRequest for testing."""
+        return CalculateCartRequest(
+            items=[
+                CartItem(
+                    customer_id="customer-453",
+                    currency=CartCurrency(currency_code="USD"),
+                    destination=CartAddress(
+                        address="200 Spectrum Center Dr, Irvine, CA 92618-1905"
+                    ),
+                    origin=CartAddress(
+                        address="323 Washington Ave N, Minneapolis, MN 55401-2427"
+                    ),
+                    line_items=[
+                        CartLineItem(
+                            item_id="item-1",
+                            price=10.75,
+                            quantity=1.5,
+                        ),
+                        CartLineItem(
+                            item_id="item-2",
+                            price=25.00,
+                            quantity=2.0,
+                            taxability_code=0,
+                        ),
+                    ],
+                )
+            ]
+        )
+
+    # ----- Routing Logic Tests -----
+
+    def test_routes_to_ziptax_without_taxcloud_config(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_calculate_cart_response,
+    ):
+        """Test that CalculateCart routes to ZipTax when TaxCloud is not configured."""
+        mock_http_client.post.return_value = sample_calculate_cart_response
+        functions = Functions(mock_http_client, mock_config)
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        assert isinstance(response, CalculateCartResponse)
+        mock_http_client.post.assert_called_once()
+        call_args = mock_http_client.post.call_args
+        assert call_args[0][0] == "/calculate/cart"
+
+    def test_routes_to_taxcloud_with_taxcloud_config(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that CalculateCart routes to TaxCloud when configured."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        assert isinstance(response, TaxCloudCalculateCartResponse)
+        mock_taxcloud_http_client.post.assert_called_once()
+        # ZipTax http_client should NOT be called
+        mock_http_client.post.assert_not_called()
+
+    def test_taxcloud_uses_correct_path(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that TaxCloud route uses the correct API path with connectionId."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        assert call_args[0][0] == "/tax/connections/test-connection-id-uuid/carts"
+
+    # ----- Request Transformation Tests -----
+
+    def test_address_parsing_destination(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that destination address is parsed into structured components."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        dest = json_body["items"][0]["destination"]
+        assert dest["line1"] == "200 Spectrum Center Dr"
+        assert dest["city"] == "Irvine"
+        assert dest["state"] == "CA"
+        assert dest["zip"] == "92618-1905"
+
+    def test_address_parsing_origin(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that origin address is parsed into structured components."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        origin = json_body["items"][0]["origin"]
+        assert origin["line1"] == "323 Washington Ave N"
+        assert origin["city"] == "Minneapolis"
+        assert origin["state"] == "MN"
+        assert origin["zip"] == "55401-2427"
+
+    def test_line_items_have_index(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that line items get 0-based index added."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        line_items = json_body["items"][0]["lineItems"]
+        assert line_items[0]["index"] == 0
+        assert line_items[1]["index"] == 1
+
+    def test_taxability_code_mapped_to_tic(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that taxabilityCode is mapped to tic field."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        line_items = json_body["items"][0]["lineItems"]
+        # item-1 has no taxability_code -> tic defaults to 0
+        assert line_items[0]["tic"] == 0
+        # item-2 has taxability_code=0 -> tic is 0
+        assert line_items[1]["tic"] == 0
+
+    def test_taxability_code_nonzero_mapped_to_tic(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that a non-zero taxabilityCode is passed through to tic."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CalculateCartRequest(
+            items=[
+                CartItem(
+                    customer_id="cust-1",
+                    currency=CartCurrency(currency_code="USD"),
+                    destination=CartAddress(
+                        address="200 Spectrum Center Dr, Irvine, CA 92618"
+                    ),
+                    origin=CartAddress(
+                        address="323 Washington Ave N, Minneapolis, MN 55401"
+                    ),
+                    line_items=[
+                        CartLineItem(
+                            item_id="item-1",
+                            price=10.00,
+                            quantity=1.0,
+                            taxability_code=31000,
+                        )
+                    ],
+                )
+            ]
+        )
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        assert json_body["items"][0]["lineItems"][0]["tic"] == 31000
+
+    def test_currency_code_passed_through(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that currency code is passed through to TaxCloud."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        assert json_body["items"][0]["currency"]["currencyCode"] == "USD"
+
+    def test_customer_id_passed_through(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that customerId is passed through to TaxCloud."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        functions.CalculateCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        assert json_body["items"][0]["customerId"] == "customer-453"
+
+    # ----- Response Parsing Tests -----
+
+    def test_taxcloud_response_parsed(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test that TaxCloud response is properly parsed."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        assert isinstance(response, TaxCloudCalculateCartResponse)
+        assert response.connection_id == "test-connection-id-uuid"
+        assert response.transaction_date == "2024-01-15T09:30:00Z"
+        assert len(response.items) == 1
+
+    def test_taxcloud_response_cart_fields(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test TaxCloud response cart item fields are properly parsed."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        cart = response.items[0]
+        assert cart.cart_id == "ce4a1234-5678-90ab-cdef-1234567890ab"
+        assert cart.customer_id == "customer-453"
+        assert cart.currency.currency_code == "USD"
+        assert cart.delivered_by_seller is False
+        assert cart.exemption.exemption_id is None
+        assert cart.exemption.is_exempt is None
+
+    def test_taxcloud_response_addresses(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test TaxCloud response structured addresses are properly parsed."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        cart = response.items[0]
+        assert cart.destination.line1 == "200 Spectrum Center Dr"
+        assert cart.destination.city == "Irvine"
+        assert cart.destination.state == "CA"
+        assert cart.destination.zip == "92618-1905"
+        assert cart.destination.country_code == "US"
+        assert cart.origin.line1 == "323 Washington Ave N"
+        assert cart.origin.city == "Minneapolis"
+        assert cart.origin.state == "MN"
+        assert cart.origin.zip == "55401-2427"
+        assert cart.origin.country_code == "US"
+
+    def test_taxcloud_response_line_items(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_taxcloud_calculate_cart_response,
+    ):
+        """Test TaxCloud response line items with tax details are parsed."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_taxcloud_calculate_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = self._build_request()
+        response = functions.CalculateCart(request)
+
+        cart = response.items[0]
+        assert len(cart.line_items) == 2
+
+        item1 = cart.line_items[0]
+        assert item1.index == 0
+        assert item1.item_id == "item-1"
+        assert item1.price == 10.75
+        assert item1.quantity == 1.5
+        assert item1.tax.rate == 0.0903
+        assert item1.tax.amount == 1.46
+        assert item1.tic == 0
+
+        item2 = cart.line_items[1]
+        assert item2.index == 1
+        assert item2.item_id == "item-2"
+        assert item2.price == 25.00
+        assert item2.quantity == 2.0
+        assert item2.tax.rate == 0.0903
+        assert item2.tax.amount == 4.52
+        assert item2.tic == 0
+
+    # ----- Address Parsing Error Tests -----
+
+    def test_invalid_address_raises_validation_error(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+    ):
+        """Test that unparseable address raises ZipTaxValidationError."""
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CalculateCartRequest(
+            items=[
+                CartItem(
+                    customer_id="cust-1",
+                    currency=CartCurrency(currency_code="USD"),
+                    destination=CartAddress(address="bad address"),
+                    origin=CartAddress(
+                        address="323 Washington Ave N, Minneapolis, MN 55401"
+                    ),
+                    line_items=[
+                        CartLineItem(item_id="item-1", price=10.00, quantity=1.0)
+                    ],
+                )
+            ]
+        )
+
+        with pytest.raises(ZipTaxValidationError, match="Cannot parse address"):
+            functions.CalculateCart(request)
+
+    def test_address_missing_state_zip_raises_error(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+    ):
+        """Test that address with invalid state/zip segment raises error."""
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CalculateCartRequest(
+            items=[
+                CartItem(
+                    customer_id="cust-1",
+                    currency=CartCurrency(currency_code="USD"),
+                    destination=CartAddress(
+                        address="200 Spectrum Center Dr, Irvine, California"
+                    ),
+                    origin=CartAddress(
+                        address="323 Washington Ave N, Minneapolis, MN 55401"
+                    ),
+                    line_items=[
+                        CartLineItem(item_id="item-1", price=10.00, quantity=1.0)
+                    ],
+                )
+            ]
+        )
+
+        with pytest.raises(ZipTaxValidationError, match="Cannot parse state and ZIP"):
+            functions.CalculateCart(request)
 
 
 class TestTaxCloudFunctions:

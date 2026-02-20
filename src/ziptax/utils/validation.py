@@ -1,6 +1,7 @@
 """Validation utilities for the ZipTax SDK."""
 
 import re
+from typing import Dict
 
 from ..exceptions import ZipTaxValidationError
 
@@ -182,3 +183,67 @@ def validate_postal_code(postal_code: str) -> None:
             f"Postal code must be in 5-digit format (e.g., 92694), "
             f"got: {postal_code}"
         )
+
+
+def parse_address_string(address: str) -> Dict[str, str]:
+    """Parse a single address string into structured TaxCloud address components.
+
+    Parses addresses in the format:
+        "line1, city, state zip" or "line1, city, state zip-plus4"
+
+    Examples:
+        "200 Spectrum Center Dr, Irvine, CA 92618"
+        "323 Washington Ave N, Minneapolis, MN 55401-2427"
+
+    Args:
+        address: Full address string to parse
+
+    Returns:
+        Dictionary with keys: line1, city, state, zip
+
+    Raises:
+        ZipTaxValidationError: If the address cannot be parsed into
+            the required components. The address must contain at least
+            3 comma-separated segments, and the last segment must contain
+            a valid state abbreviation and ZIP code.
+    """
+    if not address or not address.strip():
+        raise ZipTaxValidationError(
+            "Address string cannot be empty. "
+            "Expected format: 'street, city, state zip'"
+        )
+
+    # Split by comma and strip whitespace
+    parts = [p.strip() for p in address.split(",")]
+
+    if len(parts) < 3:
+        raise ZipTaxValidationError(
+            f"Cannot parse address into structured components. "
+            f"Expected at least 3 comma-separated parts "
+            f"(street, city, state zip), got {len(parts)}: {address!r}"
+        )
+
+    # line1 is everything before the last two segments
+    # city is the second-to-last segment
+    # state + zip is the last segment
+    line1 = ", ".join(parts[:-2])
+    city = parts[-2]
+    state_zip = parts[-1]
+
+    # Parse state and zip from the last segment (e.g., "CA 92618" or "CA 92618-1905")
+    state_zip_match = re.match(r"^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$", state_zip)
+    if not state_zip_match:
+        raise ZipTaxValidationError(
+            f"Cannot parse state and ZIP from address segment: {state_zip!r}. "
+            f"Expected format: 'ST 12345' or 'ST 12345-6789'"
+        )
+
+    state = state_zip_match.group(1).upper()
+    zip_code = state_zip_match.group(2)
+
+    return {
+        "line1": line1,
+        "city": city,
+        "state": state,
+        "zip": zip_code,
+    }
