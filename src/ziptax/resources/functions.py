@@ -1,15 +1,18 @@
 """API functions for the ZipTax SDK."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from ..config import Config
 from ..exceptions import ZipTaxCloudConfigError
 from ..models import (
+    CalculateCartRequest,
+    CalculateCartResponse,
     CreateOrderRequest,
     OrderResponse,
     RefundTransactionRequest,
     RefundTransactionResponse,
+    TaxCloudCalculateCartResponse,
     UpdateOrderRequest,
     V60AccountMetrics,
     V60PostalCodeResponse,
@@ -18,6 +21,7 @@ from ..models import (
 from ..utils.http import HTTPClient
 from ..utils.retry import retry_with_backoff
 from ..utils.validation import (
+    parse_address_string,
     validate_address,
     validate_address_autocomplete,
     validate_coordinates,
@@ -231,6 +235,186 @@ class Functions:
 
         response_data = _make_request()
         return V60PostalCodeResponse(**response_data)
+
+    # =========================================================================
+    # Cart Tax Calculation (Dual API Routing)
+    # =========================================================================
+
+    def CalculateCart(
+        self,
+        request: CalculateCartRequest,
+    ) -> Union[CalculateCartResponse, TaxCloudCalculateCartResponse]:
+        """Calculate sales tax for a shopping cart with multiple line items.
+
+        Routes to TaxCloud API when TaxCloud credentials are configured,
+        otherwise uses the ZipTax API. The input contract (CalculateCartRequest)
+        is the same regardless of which backend is used. The response type
+        differs based on the backend.
+
+        Args:
+            request: CalculateCartRequest object with cart details including
+                customer ID, addresses, currency, and line items
+
+        Returns:
+            CalculateCartResponse when using ZipTax API, or
+            TaxCloudCalculateCartResponse when using TaxCloud API
+
+        Raises:
+            ZipTaxAPIError: If the API returns an error
+            ZipTaxValidationError: If address parsing fails (TaxCloud route)
+
+        Example:
+            >>> from ziptax.models import (
+            ...     CalculateCartRequest, CartItem, CartAddress,
+            ...     CartCurrency, CartLineItem
+            ... )
+            >>> request = CalculateCartRequest(
+            ...     items=[
+            ...         CartItem(
+            ...             customer_id="customer-453",
+            ...             currency=CartCurrency(currency_code="USD"),
+            ...             destination=CartAddress(
+            ...                 address="200 Spectrum Center Dr, Irvine, CA 92618"
+            ...             ),
+            ...             origin=CartAddress(
+            ...                 address="323 Washington Ave N, Minneapolis, MN 55401"
+            ...             ),
+            ...             line_items=[
+            ...                 CartLineItem(
+            ...                     item_id="item-1",
+            ...                     price=10.75,
+            ...                     quantity=1.5,
+            ...                 )
+            ...             ],
+            ...         )
+            ...     ]
+            ... )
+            >>> result = client.request.CalculateCart(request)
+        """
+        # Route to TaxCloud if configured
+        if self.config.has_taxcloud_config and self.taxcloud_http_client is not None:
+            return self._calculate_cart_taxcloud(request)
+
+        return self._calculate_cart_ziptax(request)
+
+    def _calculate_cart_ziptax(
+        self,
+        request: CalculateCartRequest,
+    ) -> CalculateCartResponse:
+        """Send cart calculation request to ZipTax API.
+
+        Args:
+            request: CalculateCartRequest object
+
+        Returns:
+            CalculateCartResponse with per-item tax calculations
+        """
+
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            return self.http_client.post(
+                "/calculate/cart",
+                json=request.model_dump(by_alias=True, exclude_none=True),
+            )
+
+        response_data = _make_request()
+        return CalculateCartResponse(**response_data)
+
+    def _calculate_cart_taxcloud(
+        self,
+        request: CalculateCartRequest,
+    ) -> TaxCloudCalculateCartResponse:
+        """Transform and send cart calculation request to TaxCloud API.
+
+        Transforms the CalculateCartRequest into TaxCloud's expected format:
+        - Parses single-string addresses into structured components
+        - Maps taxabilityCode to tic (defaults to 0)
+        - Adds index to each line item (0-based)
+
+        Args:
+            request: CalculateCartRequest object
+
+        Returns:
+            TaxCloudCalculateCartResponse with TaxCloud-style results
+
+        Raises:
+            ZipTaxValidationError: If address parsing fails
+        """
+        assert self.taxcloud_http_client is not None
+
+        # Transform request to TaxCloud format
+        taxcloud_body = self._transform_cart_for_taxcloud(request)
+
+        # Build path with connection ID
+        path = f"/tax/connections/{self.config.taxcloud_connection_id}/carts"
+
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            assert self.taxcloud_http_client is not None
+            return self.taxcloud_http_client.post(
+                path,
+                json=taxcloud_body,
+            )
+
+        response_data = _make_request()
+        return TaxCloudCalculateCartResponse(**response_data)
+
+    @staticmethod
+    def _transform_cart_for_taxcloud(
+        request: CalculateCartRequest,
+    ) -> Dict[str, Any]:
+        """Transform a CalculateCartRequest into TaxCloud's request format.
+
+        Args:
+            request: CalculateCartRequest with ZipTax-style addresses
+
+        Returns:
+            Dictionary matching TaxCloud's expected request body schema
+
+        Raises:
+            ZipTaxValidationError: If address string cannot be parsed
+        """
+        items = []
+        for cart_item in request.items:
+            # Parse addresses from single strings to structured components
+            destination = parse_address_string(cart_item.destination.address)
+            origin = parse_address_string(cart_item.origin.address)
+
+            # Transform line items: add index, map taxabilityCode -> tic
+            line_items = []
+            for idx, line_item in enumerate(cart_item.line_items):
+                tc_line_item: Dict[str, Any] = {
+                    "index": idx,
+                    "itemId": line_item.item_id,
+                    "price": line_item.price,
+                    "quantity": line_item.quantity,
+                    "tic": (
+                        line_item.taxability_code
+                        if line_item.taxability_code is not None
+                        else 0
+                    ),
+                }
+                line_items.append(tc_line_item)
+
+            items.append(
+                {
+                    "customerId": cart_item.customer_id,
+                    "currency": {
+                        "currencyCode": cart_item.currency.currency_code,
+                    },
+                    "destination": destination,
+                    "origin": origin,
+                    "lineItems": line_items,
+                }
+            )
+
+        return {"items": items}
 
     # =========================================================================
     # TaxCloud API - Order Management Functions
