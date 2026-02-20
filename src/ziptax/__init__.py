@@ -76,7 +76,7 @@ from .models import (
     V60TaxSummary,
 )
 
-__version__ = "0.2.1-beta"
+__version__ = "0.2.3-beta"
 
 __all__ = [
     "ZipTaxClient",
