@@ -339,139 +339,22 @@ class TestGetRatesByPostalCode:
         assert result.tax_use == 0.0775
 
 
-class TestExtractStateFromNormalizedAddress:
-    """Test cases for _extract_state_from_normalized_address helper."""
-
-    def test_standard_us_address(self):
-        """Test extraction from a standard US normalized address."""
-        result = Functions._extract_state_from_normalized_address(
-            "200 Spectrum Center Dr, Irvine, CA 92618-5003, United States"
-        )
-        assert result == "CA"
-
-    def test_various_states(self):
-        """Test extraction for multiple different states."""
-        cases = {
-            "123 Main St, Dallas, TX 75201-1234, United States": "TX",
-            "323 Washington Ave N, Minneapolis, MN 55401-2427, United States": "MN",
-            "456 Elm St, Austin, TX 78701-5678, United States": "TX",
-            "789 Broadway, New York, NY 10003, United States": "NY",
-            "100 Peachtree St, Atlanta, GA 30303, United States": "GA",
-        }
-        for address, expected_state in cases.items():
-            result = Functions._extract_state_from_normalized_address(address)
-            assert result == expected_state, f"Failed for address: {address}"
-
-    def test_five_digit_zip_without_extension(self):
-        """Test extraction with a plain 5-digit ZIP code."""
-        result = Functions._extract_state_from_normalized_address(
-            "100 Main St, Portland, OR 97201, United States"
-        )
-        assert result == "OR"
-
-    def test_raises_for_unparseable_address(self):
-        """Test that ValueError is raised when state cannot be parsed."""
-        with pytest.raises(ValueError, match="Could not extract state"):
-            Functions._extract_state_from_normalized_address("not a real address")
-
-    def test_raises_for_empty_string(self):
-        """Test that ValueError is raised for empty string."""
-        with pytest.raises(ValueError, match="Could not extract state"):
-            Functions._extract_state_from_normalized_address("")
-
-
-class TestResolveSourcingAddress:
-    """Test cases for _resolve_sourcing_address helper."""
-
-    def test_interstate_uses_destination(
-        self, mock_http_client, mock_config, v60_ca_destination, v60_mn_destination
-    ):
-        """Test that interstate transactions always use the destination address."""
-        # Destination: CA, Origin: MN — different states
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
-        functions = Functions(mock_http_client, mock_config)
-
-        result = functions._resolve_sourcing_address(
-            origin_address="323 Washington Ave N, Minneapolis, MN 55401",
-            destination_address="200 Spectrum Center Dr, Irvine, CA 92618",
-        )
-
-        assert result == "200 Spectrum Center Dr, Irvine, CA 92618"
-
-    def test_intrastate_destination_based(
-        self, mock_http_client, mock_config, v60_ca_destination
-    ):
-        """Test that intrastate destination-based state uses destination address."""
-        # Both in CA, sourcing_value="D"
-        ca_origin = v60_ca_destination.copy()
-        ca_origin["addressDetail"] = {
-            "normalizedAddress": (
-                "500 Other St, Los Angeles, CA 90001-1234, United States"
-            ),
-            "incorporated": "true",
-            "geoLat": 34.0,
-            "geoLng": -118.0,
-        }
-        mock_http_client.get.side_effect = [v60_ca_destination, ca_origin]
-        functions = Functions(mock_http_client, mock_config)
-
-        result = functions._resolve_sourcing_address(
-            origin_address="500 Other St, Los Angeles, CA 90001",
-            destination_address="200 Spectrum Center Dr, Irvine, CA 92618",
-        )
-
-        assert result == "200 Spectrum Center Dr, Irvine, CA 92618"
-
-    def test_intrastate_origin_based(
-        self, mock_http_client, mock_config, v60_tx_origin_austin, v60_tx_origin_dallas
-    ):
-        """Test that intrastate origin-based state uses origin address."""
-        # Both in TX, sourcing_value="O" on destination lookup
-        mock_http_client.get.side_effect = [
-            v60_tx_origin_austin,  # destination lookup
-            v60_tx_origin_dallas,  # origin lookup
-        ]
-        functions = Functions(mock_http_client, mock_config)
-
-        result = functions._resolve_sourcing_address(
-            origin_address="123 Main St, Dallas, TX 75201",
-            destination_address="456 Elm St, Austin, TX 78701",
-        )
-
-        assert result == "123 Main St, Dallas, TX 75201"
-
-    def test_calls_get_sales_tax_for_both_addresses(
-        self, mock_http_client, mock_config, v60_ca_destination, v60_mn_destination
-    ):
-        """Test that both addresses are looked up via the V60 API."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
-        functions = Functions(mock_http_client, mock_config)
-
-        functions._resolve_sourcing_address(
-            origin_address="323 Washington Ave N, Minneapolis, MN 55401",
-            destination_address="200 Spectrum Center Dr, Irvine, CA 92618",
-        )
-
-        # Two GET calls: one for destination, one for origin
-        assert mock_http_client.get.call_count == 2
-
-
 class TestCalculateCart:
     """Test cases for CalculateCart function."""
 
-    def _build_request(
-        self,
-        dest_address="200 Spectrum Center Dr, Irvine, CA 92618-1905",
-        origin_address="323 Washington Ave N, Minneapolis, MN 55401-2427",
-    ):
+    def _build_request(self):
         """Build a sample CalculateCartRequest for testing."""
         return CalculateCartRequest(
             items=[
                 CartItem(
                     customer_id="customer-453",
                     currency=CartCurrency(currency_code="USD"),
-                    destination=CartAddress(address=dest_address),
-                    origin=CartAddress(address=origin_address),
+                    destination=CartAddress(
+                        address="200 Spectrum Center Dr, Irvine, CA 92618-1905"
+                    ),
+                    origin=CartAddress(
+                        address="323 Washington Ave N, Minneapolis, MN 55401-2427"
+                    ),
                     line_items=[
                         CartLineItem(
                             item_id="item-1",
@@ -494,11 +377,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test basic cart tax calculation request."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -516,11 +396,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test that CalculateCart calls the correct API path."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -535,11 +412,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test that request body uses camelCase field names (by_alias)."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -572,11 +446,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test that taxabilityCode is excluded from JSON when not set."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -613,11 +484,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test that taxabilityCode is included in JSON when set."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -636,11 +504,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test that response line items and tax details are properly parsed."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -671,11 +536,8 @@ class TestCalculateCart:
         mock_http_client,
         mock_config,
         sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
     ):
         """Test that response addresses are properly parsed."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
         mock_http_client.post.return_value = sample_calculate_cart_response
         functions = Functions(mock_http_client, mock_config)
 
@@ -687,123 +549,6 @@ class TestCalculateCart:
             cart.destination.address == "200 Spectrum Center Dr, Irvine, CA 92618-1905"
         )
         assert cart.origin.address == "323 Washington Ave N, Minneapolis, MN 55401-2427"
-
-    # ----- Origin/Destination Sourcing Tests -----
-
-    def test_interstate_sends_destination_address(
-        self,
-        mock_http_client,
-        mock_config,
-        sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
-    ):
-        """Test that interstate transactions send the destination address to the API."""
-        # CA destination, MN origin — different states → use destination
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
-        mock_http_client.post.return_value = sample_calculate_cart_response
-        functions = Functions(mock_http_client, mock_config)
-
-        request = self._build_request(
-            dest_address="200 Spectrum Center Dr, Irvine, CA 92618",
-            origin_address="323 Washington Ave N, Minneapolis, MN 55401",
-        )
-        functions.CalculateCart(request)
-
-        call_args = mock_http_client.post.call_args
-        json_body = call_args[1]["json"]
-        cart = json_body["items"][0]
-        # Both addresses should be overridden with the destination address
-        assert cart["destination"]["address"] == (
-            "200 Spectrum Center Dr, Irvine, CA 92618"
-        )
-        assert cart["origin"]["address"] == ("200 Spectrum Center Dr, Irvine, CA 92618")
-
-    def test_intrastate_destination_based_sends_destination_address(
-        self, mock_http_client, mock_config, sample_calculate_cart_response
-    ):
-        """Test intrastate destination-based state sends destination to the API."""
-        from tests.conftest import _build_v60_response
-
-        ca_dest = _build_v60_response(
-            normalized_address=(
-                "200 Spectrum Center Dr, Irvine, CA 92618-5003, United States"
-            ),
-            sourcing_value="D",
-        )
-        ca_origin = _build_v60_response(
-            normalized_address=(
-                "500 Other St, Los Angeles, CA 90001-1234, United States"
-            ),
-            sourcing_value="D",
-        )
-        mock_http_client.get.side_effect = [ca_dest, ca_origin]
-        mock_http_client.post.return_value = sample_calculate_cart_response
-        functions = Functions(mock_http_client, mock_config)
-
-        request = self._build_request(
-            dest_address="200 Spectrum Center Dr, Irvine, CA 92618",
-            origin_address="500 Other St, Los Angeles, CA 90001",
-        )
-        functions.CalculateCart(request)
-
-        call_args = mock_http_client.post.call_args
-        json_body = call_args[1]["json"]
-        cart = json_body["items"][0]
-        assert cart["destination"]["address"] == (
-            "200 Spectrum Center Dr, Irvine, CA 92618"
-        )
-        assert cart["origin"]["address"] == ("200 Spectrum Center Dr, Irvine, CA 92618")
-
-    def test_intrastate_origin_based_sends_origin_address(
-        self,
-        mock_http_client,
-        mock_config,
-        sample_calculate_cart_response,
-        v60_tx_origin_austin,
-        v60_tx_origin_dallas,
-    ):
-        """Test intrastate origin-based state sends origin address to the API."""
-        # Both in TX, sourcing_value="O" → use origin
-        mock_http_client.get.side_effect = [
-            v60_tx_origin_austin,  # destination lookup
-            v60_tx_origin_dallas,  # origin lookup
-        ]
-        mock_http_client.post.return_value = sample_calculate_cart_response
-        functions = Functions(mock_http_client, mock_config)
-
-        request = self._build_request(
-            dest_address="456 Elm St, Austin, TX 78701",
-            origin_address="123 Main St, Dallas, TX 75201",
-        )
-        functions.CalculateCart(request)
-
-        call_args = mock_http_client.post.call_args
-        json_body = call_args[1]["json"]
-        cart = json_body["items"][0]
-        # Both addresses should be overridden with the origin address
-        assert cart["destination"]["address"] == "123 Main St, Dallas, TX 75201"
-        assert cart["origin"]["address"] == "123 Main St, Dallas, TX 75201"
-
-    def test_sourcing_makes_two_v60_lookups(
-        self,
-        mock_http_client,
-        mock_config,
-        sample_calculate_cart_response,
-        v60_ca_destination,
-        v60_mn_destination,
-    ):
-        """Test that CalculateCart makes two V60 GET lookups before the POST."""
-        mock_http_client.get.side_effect = [v60_ca_destination, v60_mn_destination]
-        mock_http_client.post.return_value = sample_calculate_cart_response
-        functions = Functions(mock_http_client, mock_config)
-
-        request = self._build_request()
-        functions.CalculateCart(request)
-
-        # Two GET calls for V60 lookups + one POST for cart calculation
-        assert mock_http_client.get.call_count == 2
-        assert mock_http_client.post.call_count == 1
 
     # ----- Pydantic Validation Tests -----
 

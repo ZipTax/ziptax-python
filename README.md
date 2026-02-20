@@ -9,7 +9,7 @@ Official Python SDK for the [Ziptax API](https://zip-tax.com) - Get accurate sal
 
 ### Core Features (ZipTax API)
 - 🚀 Simple and intuitive API
-- 🛒 Cart tax calculation with automatic origin/destination sourcing
+- 🛒 Cart tax calculation with per-item tax rates
 - 🔄 Automatic retry logic with exponential backoff
 - ✅ Input validation
 - 🔍 Type hints for better IDE support
@@ -151,7 +151,7 @@ print(f"Message: {metrics.message}")
 
 ### Calculate Cart Tax
 
-Calculate sales tax for a shopping cart with multiple line items. The SDK automatically resolves origin/destination sourcing rules before sending the request to the API.
+Calculate sales tax for a shopping cart with multiple line items. The API handles origin/destination sourcing resolution internally.
 
 ```python
 from ziptax.models import (
@@ -200,16 +200,6 @@ print(f"Cart ID: {cart.cart_id}")
 for item in cart.line_items:
     print(f"  {item.item_id}: rate={item.tax.rate}, amount=${item.tax.amount:.2f}")
 ```
-
-#### Origin/Destination Sourcing
-
-The SDK automatically determines whether to use origin-based or destination-based tax rates:
-
-- **Interstate** (different states): Uses the destination address
-- **Intrastate, destination-based** (e.g., CA, NY): Uses the destination address
-- **Intrastate, origin-based** (e.g., TX, OH): Uses the origin address
-
-This is handled transparently -- the SDK looks up both addresses via `GetSalesTaxByAddress`, checks the `sourcingRules.value` field, and sends the correct address to the cart API.
 
 #### Validation
 
@@ -603,7 +593,7 @@ API endpoint functions accessible via `client.request`.
 - `GetSalesTaxByGeoLocation(lat, lng, **kwargs)` - Get tax rates by coordinates
 - `GetRatesByPostalCode(postal_code, **kwargs)` - Get tax rates by US postal code
 - `GetAccountMetrics(**kwargs)` - Get account usage metrics
-- `CalculateCart(request)` - Calculate sales tax for a shopping cart with origin/destination sourcing
+- `CalculateCart(request)` - Calculate sales tax for a shopping cart
 
 #### TaxCloud API Methods (Optional)
 

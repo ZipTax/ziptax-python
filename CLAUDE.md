@@ -133,14 +133,15 @@ def CreateOrder(self, request: CreateOrderRequest, ...) -> OrderResponse:
     self._check_taxcloud_config()  # Guards against missing credentials
     # ... implementation
 
-# CalculateCart resolves origin/destination sourcing before calling the API
+# CalculateCart sends the cart directly to the API for tax calculation
+# The API handles origin/destination sourcing internally
 def CalculateCart(self, request: CalculateCartRequest) -> CalculateCartResponse:
-    cart = request.items[0]
-    resolved_address = self._resolve_sourcing_address(
-        origin_address=cart.origin.address,
-        destination_address=cart.destination.address,
+    # Serialize and POST to /calculate/cart
+    response_data = self.http_client.post(
+        "/calculate/cart",
+        json=request.model_dump(by_alias=True, exclude_none=True),
     )
-    # Override both addresses with the resolved address, then POST to /calculate/cart
+    return CalculateCartResponse(**response_data)
 ```
 
 #### 4. **HTTP Client (`utils/http.py`)**
