@@ -117,8 +117,9 @@ def has_taxcloud_config(self) -> bool:
   - Uses decorator pattern for retry logic
   - TaxCloud methods check credentials before executing
 
-**Critical Pattern**:
+**Critical Patterns**:
 ```python
+# TaxCloud methods check credentials first
 def _check_taxcloud_config(self) -> None:
     """Check if TaxCloud credentials are configured."""
     if not self.config.has_taxcloud_config or self.taxcloud_http_client is None:
@@ -131,6 +132,16 @@ def _check_taxcloud_config(self) -> None:
 def CreateOrder(self, request: CreateOrderRequest, ...) -> OrderResponse:
     self._check_taxcloud_config()  # Guards against missing credentials
     # ... implementation
+
+# CalculateCart sends the cart directly to the API for tax calculation
+# The API handles origin/destination sourcing internally
+def CalculateCart(self, request: CalculateCartRequest) -> CalculateCartResponse:
+    # Serialize and POST to /calculate/cart
+    response_data = self.http_client.post(
+        "/calculate/cart",
+        json=request.model_dump(by_alias=True, exclude_none=True),
+    )
+    return CalculateCartResponse(**response_data)
 ```
 
 #### 4. **HTTP Client (`utils/http.py`)**
@@ -155,6 +166,7 @@ self.session.headers.update({"X-API-Key": api_key})
 - **Purpose**: Pydantic models for request/response validation
 - **Structure**:
   - V60 models for ZipTax API responses
+  - Cart models for cart tax calculation (with Pydantic field constraints)
   - TaxCloud models for order management
   - Uses `Field` with `alias` for camelCase ↔ snake_case mapping
 
@@ -545,6 +557,7 @@ This file is used as a reference for code generation and documentation.
 **Endpoints**:
 - `GET /request/v60/` - Tax rate lookup by address or geolocation
 - `GET /account/v60/metrics` - Account usage metrics
+- `POST /calculate/cart` - Cart tax calculation with per-item rates
 
 **Response Format**: JSON with nested structure
 
@@ -773,6 +786,6 @@ For API-specific questions:
 
 ---
 
-**Last Updated**: 2025-02-16
-**SDK Version**: 0.2.0-beta
+**Last Updated**: 2025-02-19
+**SDK Version**: 0.2.3-beta
 **Maintained By**: ZipTax Team

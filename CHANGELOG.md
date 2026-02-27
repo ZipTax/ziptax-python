@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3-beta] - 2025-02-20
+
+### Added
+- **TaxCloud Cart Routing**: `CalculateCart()` now automatically routes to TaxCloud's `POST /tax/connections/{connectionId}/carts` when TaxCloud credentials are configured
+  - Same input contract (`CalculateCartRequest`) regardless of backend
+  - SDK transforms request internally: parses single-string addresses into structured components, maps `taxabilityCode` to `tic`, adds 0-based `index` to line items
+  - Returns `TaxCloudCalculateCartResponse` (with `connectionId`, `transactionDate`, structured addresses, `deliveredBySeller`, `exemption`) when routed to TaxCloud
+  - Returns `CalculateCartResponse` (existing behavior) when TaxCloud is not configured
+  - Return type: `Union[CalculateCartResponse, TaxCloudCalculateCartResponse]`
+- **Address Parsing Utility**: `parse_address_string()` in `utils/validation.py`
+  - Parses `"street, city, ST zip"` format into structured `{line1, city, state, zip}` dict
+  - Supports 5-digit and 9-digit ZIP codes (e.g., `92618` or `92618-1905`)
+  - Raises `ZipTaxValidationError` with descriptive messages on parse failure
+- **3 New Pydantic Models** for TaxCloud cart responses:
+  - `TaxCloudCalculateCartResponse`: top-level response with `connection_id`, `items`, `transaction_date`
+  - `TaxCloudCartItemResponse`: per-cart result with structured addresses, `currency`, `delivered_by_seller`, `exemption`
+  - `TaxCloudCartLineItemResponse`: per-item result with `index`, `item_id`, `price`, `quantity`, `tax`, `tic`
+- **17 New Tests** in `TestCalculateCartTaxCloudRouting`:
+  - Routing logic (ZipTax vs TaxCloud based on config)
+  - Request transformation (address parsing, index, tic mapping, field passthrough)
+  - Response parsing (top-level, cart fields, addresses, line items)
+  - Error handling (unparseable addresses, invalid state/zip)
+
+### Changed
+- Version bumped from `0.2.1-beta` to `0.2.3-beta`
+- `CalculateCart()` return type changed from `CalculateCartResponse` to `Union[CalculateCartResponse, TaxCloudCalculateCartResponse]`
+- `CalculateCart()` implementation refactored into routing method with two private helpers: `_calculate_cart_ziptax()` and `_calculate_cart_taxcloud()`
+
+### Technical Details
+- Request transformation handled by static method `_transform_cart_for_taxcloud()` in `Functions`
+- TaxCloud cart uses `taxcloud_http_client` (separate auth) with path `/tax/connections/{connectionId}/carts`
+- Retry logic with exponential backoff applies to both ZipTax and TaxCloud routes
+- All quality checks pass: black, ruff, mypy, pytest (125 tests, 96% coverage)
+
+## [0.2.1-beta] - 2025-02-19
+
+### Added
+- **Cart Tax Calculation**: `CalculateCart()` function for calculating sales tax on shopping carts
+  - Accepts a `CalculateCartRequest` with customer info, addresses, currency, and line items
+  - Sends cart to `POST /calculate/cart` on the ZipTax API
+  - Returns per-item tax rate and amount via `CalculateCartResponse`
+  - Origin/destination sourcing is handled by the API internally
+- **9 New Pydantic Models** for cart tax calculation:
+  - Request models: `CalculateCartRequest`, `CartItem`, `CartAddress`, `CartCurrency`, `CartLineItem`
+  - Response models: `CalculateCartResponse`, `CartItemResponse`, `CartLineItemResponse`, `CartTax`
+- **Pydantic Validation** on cart models:
+  - `CartLineItem.price` and `quantity`: must be greater than 0 (`gt=0`)
+  - `CalculateCartRequest.items`: exactly 1 element (`min_length=1, max_length=1`)
+  - `CartItem.line_items`: 1-250 elements (`min_length=1, max_length=250`)
+  - `CartCurrency.currency_code`: must be `"USD"` (`Literal["USD"]`)
+- **Documentation**:
+  - CalculateCart usage guide with code examples in README.md
+  - Cart endpoint specification in `docs/spec.yaml`
+  - Actual API request/response examples in spec
+
+### Changed
+- Version bumped from `0.2.0-beta` to `0.2.1-beta`
+
+### Technical Details
+- Cart calculation uses the ZipTax HTTP client (not TaxCloud) with `X-API-Key` authentication
+- Request bodies serialized with `model_dump(by_alias=True, exclude_none=True)` for camelCase API fields
+- `taxabilityCode` is optional and excluded from the payload when not set
+- All quality checks pass: black, ruff, mypy, pytest
+
 ## [0.2.0-beta] - 2025-02-16
 
 ### Added

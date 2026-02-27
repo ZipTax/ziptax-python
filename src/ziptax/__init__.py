@@ -29,10 +29,19 @@ from .exceptions import (
     ZipTaxValidationError,
 )
 from .models import (
+    CalculateCartRequest,
+    CalculateCartResponse,
+    CartAddress,
+    CartCurrency,
+    CartItem,
     CartItemRefundWithTaxRequest,
     CartItemRefundWithTaxResponse,
+    CartItemResponse,
     CartItemWithTax,
     CartItemWithTaxResponse,
+    CartLineItem,
+    CartLineItemResponse,
+    CartTax,
     CreateOrderRequest,
     Currency,
     CurrencyResponse,
@@ -46,6 +55,9 @@ from .models import (
     Tax,
     TaxCloudAddress,
     TaxCloudAddressResponse,
+    TaxCloudCalculateCartResponse,
+    TaxCloudCartItemResponse,
+    TaxCloudCartLineItemResponse,
     TaxType,
     UpdateOrderRequest,
     V60AccountMetrics,
@@ -64,7 +76,7 @@ from .models import (
     V60TaxSummary,
 )
 
-__version__ = "0.2.0-beta"
+__version__ = "0.2.3-beta"
 
 __all__ = [
     "ZipTaxClient",
@@ -100,6 +112,20 @@ __all__ = [
     "JurisdictionType",
     "JurisdictionName",
     "TaxType",
+    # Cart Tax Calculation Models
+    "CalculateCartRequest",
+    "CalculateCartResponse",
+    "CartAddress",
+    "CartCurrency",
+    "CartItem",
+    "CartItemResponse",
+    "CartLineItem",
+    "CartLineItemResponse",
+    "CartTax",
+    # TaxCloud Cart Models
+    "TaxCloudCalculateCartResponse",
+    "TaxCloudCartItemResponse",
+    "TaxCloudCartLineItemResponse",
     # TaxCloud Models
     "TaxCloudAddress",
     "TaxCloudAddressResponse",
