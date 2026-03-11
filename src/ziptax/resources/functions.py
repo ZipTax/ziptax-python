@@ -8,6 +8,7 @@ from ..exceptions import ZipTaxCloudConfigError
 from ..models import (
     CalculateCartRequest,
     CalculateCartResponse,
+    CreateOrderFromCartRequest,
     CreateOrderRequest,
     OrderResponse,
     RefundTransactionRequest,
@@ -664,3 +665,57 @@ class Functions:
             response_data = [response_data]
 
         return [RefundTransactionResponse(**item) for item in response_data]
+
+    def CreateOrderFromCart(
+        self,
+        request: CreateOrderFromCartRequest,
+    ) -> OrderResponse:
+        """Create an order from a previously calculated cart in TaxCloud.
+
+        Converts an existing cart (created via CalculateCart with TaxCloud
+        credentials) into a finalized order for tax filing. The user must
+        have previously called CalculateCart with TaxCloud credentials and
+        stored the returned cartId from that response.
+
+        TaxCloud automatically commits the order at the time of creation,
+        finalizing it for tax filing. To set a completed date on the order,
+        use UpdateOrder after creation.
+
+        Args:
+            request: CreateOrderFromCartRequest object with cart_id and order_id
+
+        Returns:
+            OrderResponse object with created order details
+
+        Raises:
+            ZipTaxCloudConfigError: If TaxCloud credentials not configured
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> from ziptax.models import CreateOrderFromCartRequest
+            >>> request = CreateOrderFromCartRequest(
+            ...     cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            ...     order_id="my-order-1",
+            ... )
+            >>> order = client.request.CreateOrderFromCart(request)
+        """
+        self._check_taxcloud_config()
+
+        # Build path with connection ID
+        conn_id = self.config.taxcloud_connection_id
+        path = f"/tax/connections/{conn_id}/carts/orders"
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            assert self.taxcloud_http_client is not None
+            return self.taxcloud_http_client.post(
+                path,
+                json=request.model_dump(by_alias=True, exclude_none=True),
+            )
+
+        response_data = _make_request()
+        return OrderResponse(**response_data)

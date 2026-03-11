@@ -785,6 +785,41 @@ class UpdateOrderRequest(BaseModel):
     )
 
 
+class CreateOrderFromCartRequest(BaseModel):
+    """Request payload for creating an order from a previously calculated cart.
+
+    Converts an existing TaxCloud cart (created via CalculateCart with TaxCloud
+    credentials) into a finalized order for tax filing. The user must have
+    previously called CalculateCart and stored the returned cartId from the
+    TaxCloudCartItemResponse.
+
+    Attributes:
+        cart_id: Cart ID from a previous TaxCloud CalculateCart response.
+        order_id: User's internal order ID for cross-referencing.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    cart_id: str = Field(
+        ...,
+        alias="cartId",
+        min_length=1,
+        description=(
+            "Cart ID from a previous TaxCloud CalculateCart response "
+            "(TaxCloudCartItemResponse.cart_id)"
+        ),
+    )
+    order_id: str = Field(
+        ...,
+        alias="orderId",
+        min_length=1,
+        description=(
+            "User's internal order ID for cross-referencing. "
+            "Must be unique per connection."
+        ),
+    )
+
+
 class CartItemRefundWithTaxRequest(BaseModel):
     """Cart line item to be refunded."""
 
