@@ -2769,7 +2769,6 @@ actual_api_responses:
         "customerId": "customer-453",
         "connectionId": "25eb9b97-5acb-492d-b720-c03e79cf715a",
         "transactionDate": "2024-01-15T09:30:00Z",
-        "completedDate": "2024-01-15T09:30:00Z",
         "origin": {
           "line1": "323 Washington Ave N",
           "city": "Minneapolis",

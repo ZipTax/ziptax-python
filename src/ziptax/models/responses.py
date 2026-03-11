@@ -754,8 +754,8 @@ class OrderResponse(BaseModel):
     transaction_date: str = Field(
         ..., alias="transactionDate", description="RFC3339 datetime string"
     )
-    completed_date: str = Field(
-        ..., alias="completedDate", description="RFC3339 datetime string"
+    completed_date: Optional[str] = Field(
+        None, alias="completedDate", description="RFC3339 datetime string"
     )
     origin: TaxCloudAddressResponse = Field(..., description="Origin address")
     destination: TaxCloudAddressResponse = Field(..., description="Destination address")

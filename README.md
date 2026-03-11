@@ -339,6 +339,30 @@ full_refunds = client.request.RefundOrder("my-order-2")
 print("Full refund created")
 ```
 
+### Create an Order from Cart
+
+If you've already calculated cart tax via `CalculateCart` with TaxCloud credentials, you can convert that cart directly into a finalized order using the returned `cart_id`:
+
+```python
+from ziptax.models import CreateOrderFromCartRequest
+
+# Use the cart_id from a previous CalculateCart response
+request = CreateOrderFromCartRequest(
+    cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+    order_id="my-order-1",
+)
+
+order = client.request.CreateOrderFromCart(request)
+print(f"Created order: {order.order_id}")
+print(f"Transaction date: {order.transaction_date}")
+print(f"Tax amount: ${order.line_items[0].tax.amount}")
+
+# TaxCloud automatically commits the order at creation time.
+# To set a completed date, use UpdateOrder after creation:
+update_request = UpdateOrderRequest(completed_date="2024-01-16T10:00:00Z")
+updated = client.request.UpdateOrder(order.order_id, update_request)
+```
+
 ### TaxCloud Error Handling
 
 ```python
@@ -603,6 +627,7 @@ API endpoint functions accessible via `client.request`.
 Requires `taxcloud_connection_id` and `taxcloud_api_key` in client initialization.
 
 - `CreateOrder(request, **kwargs)` - Create an order in TaxCloud
+- `CreateOrderFromCart(request)` - Create an order from a previously calculated cart
 - `GetOrder(order_id)` - Retrieve an order by ID
 - `UpdateOrder(order_id, request)` - Update an order's completed date
 - `RefundOrder(order_id, request)` - Create a full or partial refund

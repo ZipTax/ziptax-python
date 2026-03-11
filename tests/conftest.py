@@ -323,7 +323,6 @@ def sample_create_order_from_cart_response():
         "customerId": "customer-453",
         "connectionId": "test-connection-id-uuid",
         "transactionDate": "2024-01-15T09:30:00Z",
-        "completedDate": "2024-01-15T09:30:00Z",
         "origin": {
             "line1": "323 Washington Ave N",
             "city": "Minneapolis",

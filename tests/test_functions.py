@@ -1538,7 +1538,7 @@ class TestCreateOrderFromCart:
         response = functions.CreateOrderFromCart(request)
 
         assert response.transaction_date == "2024-01-15T09:30:00Z"
-        assert response.completed_date == "2024-01-15T09:30:00Z"
+        assert response.completed_date is None
         assert response.origin.line1 == "323 Washington Ave N"
         assert response.origin.state == "MN"
         assert response.destination.line1 == "200 Spectrum Center Dr"
