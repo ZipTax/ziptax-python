@@ -344,7 +344,7 @@ print("Full refund created")
 If you've already calculated cart tax via `CalculateCart` with TaxCloud credentials, you can convert that cart directly into a finalized order using the returned `cart_id`:
 
 ```python
-from ziptax.models import CreateOrderFromCartRequest
+from ziptax.models import CreateOrderFromCartRequest, UpdateOrderRequest
 
 # Use the cart_id from a previous CalculateCart response
 request = CreateOrderFromCartRequest(

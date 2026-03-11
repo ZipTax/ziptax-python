@@ -1556,9 +1556,10 @@ models:
       - name: "completed_date"
         type: "string"
         format: "date-time"
-        required: true
+        required: false
+        nullable: true
         api_field: "completedDate"
-        description: "RFC3339 datetime string when order was shipped/completed"
+        description: "RFC3339 datetime string when order was shipped/completed. Null when created via CreateOrderFromCart; set via UpdateOrder."
       - name: "origin"
         type: "TaxCloudAddressResponse"
         required: true
@@ -2883,11 +2884,7 @@ version_history:
       - "POST /tax/connections/{connectionId}/carts/orders endpoint support"
       - "Reuses existing OrderResponse for consistent return types"
   - version: "0.2.3-beta"
-    date: "2026-03-05"
-    changes:
-      - "QA fixes and refinements"
-  - version: "0.2.2-beta"
-    date: "2026-02-27"
+    date: "2025-02-20"
     changes:
       - "CalculateCart with dual API routing (ZipTax default, TaxCloud when configured)"
       - "Cart tax calculation models: CalculateCartRequest, CalculateCartResponse"
@@ -2896,16 +2893,26 @@ version_history:
       - "Cart request validation (items, line items, currency, addresses)"
       - "TaxabilityCode to TIC mapping with None-safe defaults"
       - "Auto-generated 0-based line item indices for TaxCloud"
+  - version: "0.2.1-beta"
+    date: "2025-02-19"
+    changes:
+      - "Cart tax calculation: CalculateCart endpoint"
+      - "Cart Pydantic models with validation (price/quantity gt=0, items length, currency)"
+      - "POST /calculate/cart endpoint support"
   - version: "0.2.0-beta"
-    date: "2026-02-16"
+    date: "2025-02-16"
     changes:
       - "TaxCloud order management: CreateOrder, GetOrder, UpdateOrder, RefundOrder"
       - "Dual API support: ZipTax (required) + TaxCloud (optional)"
       - "TaxCloud client configuration options"
       - "Internal HTTP Post, Patch methods"
       - "Unified exception handling across both APIs"
+  - version: "0.1.2-beta"
+    date: "2025-02-15"
+    changes:
+      - "Version bump for beta release"
   - version: "1.0.0"
-    date: "2024-01-15"
+    date: "2024-01-21"
     changes:
       - "Initial release"
       - "Support for TaxRates and Jurisdictions resources"
