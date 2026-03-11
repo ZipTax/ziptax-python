@@ -9,7 +9,7 @@
 project:
   name: "ziptax-sdk"
   language: "python"
-  version: "0.2.3-beta"
+  version: "0.2.4-beta"
   description: "Official Python SDK for the ZipTax API with optional TaxCloud order management support"
 
   # Repository information
@@ -2875,14 +2875,18 @@ quality_requirements:
 # Version History
 # -----------------------------------------------------------------------------
 version_history:
-  - version: "0.2.3-beta"
+  - version: "0.2.4-beta"
     date: "2026-03-11"
     changes:
       - "CreateOrderFromCart: create orders from previously calculated TaxCloud carts"
       - "CreateOrderFromCartRequest model with cart_id and order_id"
-      - "Cart-to-order validation (cart_id and order_id required)"
+      - "Cart-to-order validation (cart_id and order_id required, min_length=1)"
       - "POST /tax/connections/{connectionId}/carts/orders endpoint support"
       - "Reuses existing OrderResponse for consistent return types"
+  - version: "0.2.3-beta"
+    date: "2026-03-05"
+    changes:
+      - "QA fixes and refinements"
   - version: "0.2.2-beta"
     date: "2026-02-27"
     changes:
