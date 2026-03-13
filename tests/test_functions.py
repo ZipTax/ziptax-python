@@ -11,6 +11,7 @@ from ziptax.models import (
     CartCurrency,
     CartItem,
     CartLineItem,
+    CreateOrderFromCartRequest,
     CreateOrderRequest,
     OrderResponse,
     RefundTransactionRequest,
@@ -1423,3 +1424,194 @@ class TestTaxCloudFunctions:
 
         with pytest.raises(ZipTaxCloudConfigError):
             functions.GetOrder("test-order-1")
+
+
+class TestCreateOrderFromCart:
+    """Test cases for CreateOrderFromCart function."""
+
+    def test_basic_request(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_create_order_from_cart_response,
+    ):
+        """Test basic CreateOrderFromCart request."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_create_order_from_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderFromCartRequest(
+            cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            order_id="my-order-1",
+        )
+        response = functions.CreateOrderFromCart(request)
+
+        assert isinstance(response, OrderResponse)
+        assert response.order_id == "my-order-1"
+        assert response.customer_id == "customer-453"
+        assert response.connection_id == "test-connection-id-uuid"
+        mock_taxcloud_http_client.post.assert_called_once()
+
+    def test_uses_correct_path(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_create_order_from_cart_response,
+    ):
+        """Test that CreateOrderFromCart uses the correct API path."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_create_order_from_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderFromCartRequest(
+            cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            order_id="my-order-1",
+        )
+        functions.CreateOrderFromCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        assert (
+            call_args[0][0] == "/tax/connections/test-connection-id-uuid/carts/orders"
+        )
+
+    def test_request_body_serialization(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_create_order_from_cart_response,
+    ):
+        """Test that request body uses camelCase field names (by_alias)."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_create_order_from_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderFromCartRequest(
+            cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            order_id="my-order-1",
+        )
+        functions.CreateOrderFromCart(request)
+
+        call_args = mock_taxcloud_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        assert json_body["cartId"] == "ce4a1234-5678-90ab-cdef-1234567890ab"
+        assert json_body["orderId"] == "my-order-1"
+
+    def test_response_fields_parsed(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_create_order_from_cart_response,
+    ):
+        """Test that all response fields are properly parsed."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_create_order_from_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderFromCartRequest(
+            cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            order_id="my-order-1",
+        )
+        response = functions.CreateOrderFromCart(request)
+
+        assert response.transaction_date == "2024-01-15T09:30:00Z"
+        assert response.completed_date is None
+        assert response.origin.line1 == "323 Washington Ave N"
+        assert response.origin.state == "MN"
+        assert response.destination.line1 == "200 Spectrum Center Dr"
+        assert response.destination.state == "CA"
+        assert len(response.line_items) == 1
+        assert response.line_items[0].item_id == "item-1"
+        assert response.line_items[0].tax.amount == 1.46
+        assert response.line_items[0].tax.rate == 0.0903
+        assert response.currency.currency_code == "USD"
+        assert response.delivered_by_seller is False
+        assert response.exclude_from_filing is False
+
+    def test_without_taxcloud_config_raises(self, mock_http_client, mock_config):
+        """Test CreateOrderFromCart raises without TaxCloud config."""
+        functions = Functions(mock_http_client, mock_config)
+
+        request = CreateOrderFromCartRequest(
+            cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            order_id="my-order-1",
+        )
+
+        with pytest.raises(
+            ZipTaxCloudConfigError,
+            match="TaxCloud credentials not configured",
+        ):
+            functions.CreateOrderFromCart(request)
+
+    def test_does_not_call_ziptax_http_client(
+        self,
+        mock_http_client,
+        mock_taxcloud_config,
+        mock_taxcloud_http_client,
+        sample_create_order_from_cart_response,
+    ):
+        """Test that CreateOrderFromCart only uses TaxCloud client."""
+        mock_taxcloud_http_client.post.return_value = (
+            sample_create_order_from_cart_response
+        )
+        functions = Functions(
+            mock_http_client,
+            mock_taxcloud_config,
+            taxcloud_http_client=mock_taxcloud_http_client,
+        )
+
+        request = CreateOrderFromCartRequest(
+            cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+            order_id="my-order-1",
+        )
+        functions.CreateOrderFromCart(request)
+
+        mock_http_client.post.assert_not_called()
+        mock_http_client.get.assert_not_called()
+
+    # ----- Pydantic Validation Tests -----
+
+    def test_empty_cart_id_rejected(self):
+        """Test that empty cart_id is rejected by Pydantic validation."""
+        with pytest.raises(ValidationError, match="String should have at least 1"):
+            CreateOrderFromCartRequest(cart_id="", order_id="my-order-1")
+
+    def test_empty_order_id_rejected(self):
+        """Test that empty order_id is rejected by Pydantic validation."""
+        with pytest.raises(ValidationError, match="String should have at least 1"):
+            CreateOrderFromCartRequest(
+                cart_id="ce4a1234-5678-90ab-cdef-1234567890ab",
+                order_id="",
+            )
+
+    def test_camel_case_alias_accepted(self):
+        """Test that camelCase field names are accepted via aliases."""
+        request = CreateOrderFromCartRequest(
+            cartId="ce4a1234-5678-90ab-cdef-1234567890ab",
+            orderId="my-order-1",
+        )
+        assert request.cart_id == "ce4a1234-5678-90ab-cdef-1234567890ab"
+        assert request.order_id == "my-order-1"

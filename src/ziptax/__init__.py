@@ -42,6 +42,7 @@ from .models import (
     CartLineItem,
     CartLineItemResponse,
     CartTax,
+    CreateOrderFromCartRequest,
     CreateOrderRequest,
     Currency,
     CurrencyResponse,
@@ -76,7 +77,7 @@ from .models import (
     V60TaxSummary,
 )
 
-__version__ = "0.2.3-beta"
+__version__ = "0.2.4-beta"
 
 __all__ = [
     "ZipTaxClient",
@@ -136,6 +137,7 @@ __all__ = [
     "Exemption",
     "CartItemWithTax",
     "CartItemWithTaxResponse",
+    "CreateOrderFromCartRequest",
     "CreateOrderRequest",
     "OrderResponse",
     "UpdateOrderRequest",

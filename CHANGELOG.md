@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4-beta] - 2026-03-11
+
+### Added
+- **CreateOrderFromCart**: `CreateOrderFromCart()` function to create orders from previously calculated TaxCloud carts
+  - Converts an existing cart (from `CalculateCart` with TaxCloud credentials) into a finalized order for tax filing
+  - Posts to `POST /tax/connections/{connectionId}/carts/orders`
+  - Returns `OrderResponse` (reuses existing model for consistent return types)
+  - TaxCloud automatically commits the order at creation time
+  - To set a completed date, use `UpdateOrder()` after creation
+- **CreateOrderFromCartRequest** Pydantic model:
+  - `cart_id` (alias: `cartId`): Cart ID from a previous TaxCloud CalculateCart response
+  - `order_id` (alias: `orderId`): User's internal order ID for cross-referencing
+  - Both fields require `min_length=1` validation
+- **9 New Tests** in `TestCreateOrderFromCart`:
+  - Basic request/response, correct API path, request body serialization
+  - Full response field parsing, TaxCloud config guard, ZipTax client isolation
+  - Pydantic validation: empty cart_id rejected, empty order_id rejected, camelCase aliases accepted
+
+### Changed
+- Version bumped from `0.2.3-beta` to `0.2.4-beta`
+
+### Technical Details
+- Uses `taxcloud_http_client` with `_check_taxcloud_config()` guard (same pattern as other TaxCloud methods)
+- Request serialized with `model_dump(by_alias=True, exclude_none=True)` for camelCase API fields
+- Retry logic with exponential backoff applies via `@retry_with_backoff` decorator
+- All quality checks pass: black, ruff, mypy, pytest (134 tests, 96% coverage)
+
 ## [0.2.3-beta] - 2025-02-20
 
 ### Added

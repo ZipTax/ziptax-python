@@ -316,6 +316,44 @@ def sample_order_response():
 
 
 @pytest.fixture
+def sample_create_order_from_cart_response():
+    """Sample TaxCloud OrderResponse data for CreateOrderFromCart testing."""
+    return {
+        "orderId": "my-order-1",
+        "customerId": "customer-453",
+        "connectionId": "test-connection-id-uuid",
+        "transactionDate": "2024-01-15T09:30:00Z",
+        "origin": {
+            "line1": "323 Washington Ave N",
+            "city": "Minneapolis",
+            "state": "MN",
+            "zip": "55401-2427",
+            "countryCode": "US",
+        },
+        "destination": {
+            "line1": "200 Spectrum Center Dr",
+            "city": "Irvine",
+            "state": "CA",
+            "zip": "92618-1905",
+            "countryCode": "US",
+        },
+        "lineItems": [
+            {
+                "index": 0,
+                "itemId": "item-1",
+                "price": 10.75,
+                "quantity": 1.5,
+                "tax": {"amount": 1.46, "rate": 0.0903},
+                "tic": 0,
+            }
+        ],
+        "currency": {"currencyCode": "USD"},
+        "deliveredBySeller": False,
+        "excludeFromFiling": False,
+    }
+
+
+@pytest.fixture
 def sample_refund_response():
     """Sample TaxCloud RefundTransactionResponse data for testing."""
     return {
