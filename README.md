@@ -10,6 +10,7 @@ Official Python SDK for the [Ziptax API](https://zip.tax) - Get accurate sales a
 ### Core Features (ZipTax API)
 - 🚀 Simple and intuitive API
 - 🛒 Cart tax calculation with per-item tax rates
+- 🏷️ Product code (TIC) search and AI-powered recommendation
 - 🔄 Automatic retry logic with exponential backoff
 - ✅ Input validation
 - 🔍 Type hints for better IDE support
@@ -147,6 +148,53 @@ print(f"Requests: {metrics.request_count:,} / {metrics.request_limit:,}")
 print(f"Usage: {metrics.usage_percent:.2f}%")
 print(f"Account Active: {metrics.is_active}")
 print(f"Message: {metrics.message}")
+```
+
+### Search Product Codes (TIC)
+
+Search for Taxability Information Codes (TICs) using a natural language product description. Returns all matching codes ranked and scored by relevance.
+
+```python
+response = client.request.SearchProductCodes(
+    "baked goods sold in plastic packaging"
+)
+
+for result in response.results:
+    print(f"TIC {result.tic_id}: {result.label}")
+    print(f"  Score: {result.score:.4f} (Rank: {result.rank})")
+    print(f"  Description: {result.description}")
+```
+
+Use the returned `tic_id` as the `taxability_code` parameter in rate requests or cart line items. For v60 rate requests, convert to `str` first:
+
+```python
+# Use with rate requests (taxability_code is a string parameter)
+tic = response.results[0].tic_id
+tax = client.request.GetSalesTaxByAddress(
+    "200 Spectrum Center Dr, Irvine, CA 92618",
+    taxability_code=str(tic),
+)
+
+# Use with cart line items (taxability_code is an integer)
+CartLineItem(item_id="item-1", price=10.00, quantity=1, taxability_code=tic)
+```
+
+### Recommend Product Code (TIC)
+
+Get an AI-powered product code recommendation. Returns a single best-match TIC with higher accuracy than the standard search. Has slightly higher latency due to the AI processing step.
+
+```python
+response = client.request.RecommendProductCode(
+    "baked goods sold in plastic packaging"
+)
+
+prediction = response.predictions[0]
+if prediction.status == "success":
+    print(f"Recommended TIC: {prediction.tic_id} ({prediction.label})")
+    print(f"  TIC Description: {prediction.tic_description}")
+    print(f"  Product Description: {prediction.product_description}")
+else:
+    print(f"Recommendation failed: {prediction.error}")
 ```
 
 ### Calculate Cart Tax
@@ -544,6 +592,39 @@ class V60AccountMetrics:
 
 **Note:** Uses `extra="allow"` to accept any additional fields the API may return.
 
+### ProductCodeSearchResponse
+
+```python
+class ProductCodeSearchResponse:
+    query: str                                          # The original search query
+    results: List[ProductCodeSearchResult]              # Ranked results
+
+class ProductCodeSearchResult:
+    tic_id: int             # Taxability Information Code (parsed from string)
+    label: str              # TIC label
+    natural_label: str      # Natural language label
+    description: str        # Full TIC description
+    documentation: str      # Long-form TIC documentation
+    rank: int               # Result rank (1 = best match, parsed from string)
+    score: float            # Confidence score 0.0-1.0 (parsed from string)
+```
+
+### ProductCodeRecommendationResponse
+
+```python
+class ProductCodeRecommendationResponse:
+    predictions: List[ProductCodeRecommendation]        # AI recommendations
+
+class ProductCodeRecommendation:
+    status: str                    # "success" or "fail"
+    error: Optional[str]           # Error message when status is "fail"
+    tic_id: int                    # Recommended TIC (parsed from string)
+    label: str                     # TIC label
+    natural_label: str             # Natural language label
+    tic_description: str           # Full TIC description
+    product_description: str       # Original product description from query
+```
+
 See the [models documentation](src/ziptax/models/responses.py) for complete model definitions.
 
 ## Development
@@ -620,6 +701,8 @@ API endpoint functions accessible via `client.request`.
 - `GetSalesTaxByGeoLocation(lat, lng, **kwargs)` - Get tax rates by coordinates
 - `GetRatesByPostalCode(postal_code, **kwargs)` - Get tax rates by US postal code
 - `GetAccountMetrics(**kwargs)` - Get account usage metrics
+- `SearchProductCodes(query)` - Search for product codes (TICs) by description
+- `RecommendProductCode(query)` - Get an AI-powered TIC recommendation
 - `CalculateCart(request)` - Calculate sales tax for a shopping cart
 
 #### TaxCloud API Methods (Optional)
