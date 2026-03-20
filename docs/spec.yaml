@@ -9,7 +9,7 @@
 project:
   name: "ziptax-sdk"
   language: "python"
-  version: "0.2.4-beta"
+  version: "0.2.5-beta"
   description: "Official Python SDK for the ZipTax API with optional TaxCloud order management support"
 
   # Repository information
@@ -297,8 +297,10 @@ resources:
           401:
             - "Missing X-API-KEY header"
             - "Invalid or inactive API key"
+        api_error_codes:
           113:
-            - "Product rate rules not enabled for key"
+            description: "Product rate rules not enabled for key"
+            note: "ZipTax API-specific response code (not an HTTP status code). Returned inside the response body metadata, not as the HTTP status."
 
       - name: "RecommendProductCode"
         api: "ziptax"
@@ -338,8 +340,10 @@ resources:
           401:
             - "Missing X-API-KEY header"
             - "Invalid or inactive API key"
+        api_error_codes:
           113:
-            - "Product rate rules not enabled for key"
+            description: "Product rate rules not enabled for key"
+            note: "ZipTax API-specific response code (not an HTTP status code). Returned inside the response body metadata, not as the HTTP status."
 
       # -----------------------------------------------------------------------
       # Cart Tax Calculation - Dual API Routing

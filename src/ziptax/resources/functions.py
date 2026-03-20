@@ -251,8 +251,11 @@ class Functions:
         """Search for product codes (TICs) by natural language description.
 
         Returns all matching Taxability Information Codes ranked and scored
-        by relevance. Use the returned tic_id as the taxability_code parameter
-        in rate requests or cart line items.
+        by relevance. Use the returned ``tic_id`` as the ``taxability_code``
+        parameter in rate requests or cart line items. For v60 rate requests
+        (e.g., ``GetSalesTaxByAddress``), convert ``tic_id`` to ``str`` since
+        ``taxability_code`` is a string parameter. For cart line items,
+        ``tic_id`` can be used directly as an integer.
 
         Args:
             query: Natural language product description
@@ -299,8 +302,11 @@ class Functions:
         the standard search. Has slightly higher latency than
         SearchProductCodes due to the AI processing step.
 
-        Use the returned tic_id as the taxability_code parameter in rate
-        requests or cart line items.
+        Use the returned ``tic_id`` as the ``taxability_code`` parameter in
+        rate requests or cart line items. For v60 rate requests (e.g.,
+        ``GetSalesTaxByAddress``), convert ``tic_id`` to ``str`` since
+        ``taxability_code`` is a string parameter. For cart line items,
+        ``tic_id`` can be used directly as an integer.
 
         Args:
             query: Natural language product description

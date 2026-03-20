@@ -450,6 +450,18 @@ class TestSearchProductCodes:
         with pytest.raises(ZipTaxValidationError, match="cannot be empty"):
             functions.SearchProductCodes("   ")
 
+    @pytest.mark.parametrize(
+        "invalid_query", [None, 123, 12.34, ["list"], {"dict": "val"}]
+    )
+    def test_non_string_query_validation(
+        self, mock_http_client, mock_config, invalid_query
+    ):
+        """Test validation of non-string query values."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="must be a string"):
+            functions.SearchProductCodes(invalid_query)
+
     def test_empty_results_list(self, mock_http_client, mock_config):
         """Test handling of empty results from API."""
         mock_http_client.post.return_value = {
@@ -554,6 +566,18 @@ class TestRecommendProductCode:
 
         with pytest.raises(ZipTaxValidationError, match="cannot be empty"):
             functions.RecommendProductCode("   ")
+
+    @pytest.mark.parametrize(
+        "invalid_query", [None, 123, 12.34, ["list"], {"dict": "val"}]
+    )
+    def test_non_string_query_validation(
+        self, mock_http_client, mock_config, invalid_query
+    ):
+        """Test validation of non-string query values."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="must be a string"):
+            functions.RecommendProductCode(invalid_query)
 
     def test_prediction_with_error(self, mock_http_client, mock_config):
         """Test handling of a prediction with error status."""
