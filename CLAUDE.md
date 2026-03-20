@@ -787,5 +787,5 @@ For API-specific questions:
 ---
 
 **Last Updated**: 2025-02-19
-**SDK Version**: 0.2.5-beta
+**SDK Version**: 0.2.6-beta
 **Maintained By**: ZipTax Team
