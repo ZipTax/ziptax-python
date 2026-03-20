@@ -82,7 +82,7 @@ from .models import (
     V60TaxSummary,
 )
 
-__version__ = "0.2.4-beta"
+__version__ = "0.2.5-beta"
 
 __all__ = [
     "ZipTaxClient",
