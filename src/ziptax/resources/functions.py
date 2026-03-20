@@ -11,6 +11,8 @@ from ..models import (
     CreateOrderFromCartRequest,
     CreateOrderRequest,
     OrderResponse,
+    ProductCodeRecommendationResponse,
+    ProductCodeSearchResponse,
     RefundTransactionRequest,
     RefundTransactionResponse,
     TaxCloudCalculateCartResponse,
@@ -30,6 +32,7 @@ from ..utils.validation import (
     validate_format,
     validate_historical_date,
     validate_postal_code,
+    validate_product_query,
 )
 
 logger = logging.getLogger(__name__)
@@ -236,6 +239,109 @@ class Functions:
 
         response_data = _make_request()
         return V60PostalCodeResponse(**response_data)
+
+    # =========================================================================
+    # Product Code (TIC) Search
+    # =========================================================================
+
+    def SearchProductCodes(
+        self,
+        query: str,
+    ) -> ProductCodeSearchResponse:
+        """Search for product codes (TICs) by natural language description.
+
+        Returns all matching Taxability Information Codes ranked and scored
+        by relevance. Use the returned ``tic_id`` as the ``taxability_code``
+        parameter in rate requests or cart line items. For v60 rate requests
+        (e.g., ``GetSalesTaxByAddress``), convert ``tic_id`` to ``str`` since
+        ``taxability_code`` is a string parameter. For cart line items,
+        ``tic_id`` can be used directly as an integer.
+
+        Args:
+            query: Natural language product description
+                (e.g., "baked goods sold in plastic packaging")
+
+        Returns:
+            ProductCodeSearchResponse with ranked search results
+
+        Raises:
+            ZipTaxValidationError: If query is empty or invalid
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> response = client.request.SearchProductCodes(
+            ...     "baked goods sold in plastic packaging"
+            ... )
+            >>> for result in response.results:
+            ...     print(f"{result.tic_id}: {result.label} (score={result.score})")
+        """
+        # Validate inputs
+        validate_product_query(query)
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            return self.http_client.post(
+                "/search/tic",
+                json={"query": query},
+            )
+
+        response_data = _make_request()
+        return ProductCodeSearchResponse(**response_data)
+
+    def RecommendProductCode(
+        self,
+        query: str,
+    ) -> ProductCodeRecommendationResponse:
+        """Get an AI-powered product code (TIC) recommendation.
+
+        Returns a single best-match TIC code with higher accuracy than
+        the standard search. Has slightly higher latency than
+        SearchProductCodes due to the AI processing step.
+
+        Use the returned ``tic_id`` as the ``taxability_code`` parameter in
+        rate requests or cart line items. For v60 rate requests (e.g.,
+        ``GetSalesTaxByAddress``), convert ``tic_id`` to ``str`` since
+        ``taxability_code`` is a string parameter. For cart line items,
+        ``tic_id`` can be used directly as an integer.
+
+        Args:
+            query: Natural language product description
+                (e.g., "baked goods sold in plastic packaging")
+
+        Returns:
+            ProductCodeRecommendationResponse with AI-powered recommendation
+
+        Raises:
+            ZipTaxValidationError: If query is empty or invalid
+            ZipTaxAPIError: If the API returns an error
+
+        Example:
+            >>> response = client.request.RecommendProductCode(
+            ...     "baked goods sold in plastic packaging"
+            ... )
+            >>> prediction = response.predictions[0]
+            >>> print(f"Recommended TIC: {prediction.tic_id} ({prediction.label})")
+        """
+        # Validate inputs
+        validate_product_query(query)
+
+        # Make request with retry logic
+        @retry_with_backoff(
+            max_retries=self.max_retries,
+            base_delay=self.retry_delay,
+        )
+        def _make_request() -> Dict[str, Any]:
+            return self.http_client.post(
+                "/search/tic/recommend",
+                json={"query": query},
+            )
+
+        response_data = _make_request()
+        return ProductCodeRecommendationResponse(**response_data)
 
     # =========================================================================
     # Cart Tax Calculation (Dual API Routing)

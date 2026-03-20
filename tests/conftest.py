@@ -354,6 +354,64 @@ def sample_create_order_from_cart_response():
 
 
 @pytest.fixture
+def sample_product_code_search_response():
+    """Sample ProductCodeSearchResponse data for testing."""
+    return {
+        "query": "baked goods sold in plastic packaging",
+        "results": [
+            {
+                "ticId": "41030",
+                "label": "Bakery Items",
+                "naturalLabel": "Bakery Items",
+                "description": (
+                    "Bakery items sold without eating utensils "
+                    "provided by the seller"
+                ),
+                "documentation": (
+                    "Bakery items sold without eating utensils "
+                    "provided by the seller, not sold as a prepared food"
+                ),
+                "rank": "1",
+                "score": "0.891025641025641",
+            },
+            {
+                "ticId": "40030",
+                "label": "Food and Food Ingredients",
+                "naturalLabel": "Food and Food Ingredients",
+                "description": "Food and food ingredients for human consumption",
+                "documentation": (
+                    "Food and food ingredients for human consumption "
+                    "that are not candy, dietary supplements, or soft drinks"
+                ),
+                "rank": "2",
+                "score": "0.750512820512821",
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def sample_product_code_recommendation_response():
+    """Sample ProductCodeRecommendationResponse data for testing."""
+    return {
+        "predictions": [
+            {
+                "status": "success",
+                "error": None,
+                "ticId": "41030",
+                "label": "Bakery Items",
+                "naturalLabel": "Bakery Items",
+                "tic_description": (
+                    "Bakery items sold without eating utensils "
+                    "provided by the seller"
+                ),
+                "product_description": "baked goods sold in plastic packaging",
+            }
+        ]
+    }
+
+
+@pytest.fixture
 def sample_refund_response():
     """Sample TaxCloud RefundTransactionResponse data for testing."""
     return {

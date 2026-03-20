@@ -50,6 +50,11 @@ from .models import (
     JurisdictionName,
     JurisdictionType,
     OrderResponse,
+    ProductCodeRecommendation,
+    ProductCodeRecommendationResponse,
+    ProductCodeSearchRequest,
+    ProductCodeSearchResponse,
+    ProductCodeSearchResult,
     RefundTax,
     RefundTransactionRequest,
     RefundTransactionResponse,
@@ -77,7 +82,7 @@ from .models import (
     V60TaxSummary,
 )
 
-__version__ = "0.2.4-beta"
+__version__ = "0.2.5-beta"
 
 __all__ = [
     "ZipTaxClient",
@@ -113,6 +118,12 @@ __all__ = [
     "JurisdictionType",
     "JurisdictionName",
     "TaxType",
+    # Product Code (TIC) Search Models
+    "ProductCodeSearchRequest",
+    "ProductCodeSearchResult",
+    "ProductCodeSearchResponse",
+    "ProductCodeRecommendation",
+    "ProductCodeRecommendationResponse",
     # Cart Tax Calculation Models
     "CalculateCartRequest",
     "CalculateCartResponse",

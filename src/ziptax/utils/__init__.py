@@ -10,6 +10,7 @@ from .validation import (
     validate_country_code,
     validate_format,
     validate_historical_date,
+    validate_product_query,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "validate_historical_date",
     "validate_format",
     "validate_api_key",
+    "validate_product_query",
 ]

@@ -361,6 +361,145 @@ class V60PostalCodeResponse(BaseModel):
 
 
 # =============================================================================
+# Product Code (TIC) Search Models
+# =============================================================================
+
+
+class ProductCodeSearchRequest(BaseModel):
+    """Request payload for product code search and recommendation endpoints.
+
+    Used with both SearchProductCodes and RecommendProductCode functions.
+
+    Attributes:
+        query: Natural language product description to search for matching TIC codes.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        description="Natural language product description to search",
+    )
+
+
+class ProductCodeSearchResult(BaseModel):
+    """A single product code search result with TIC code, description, rank, and score.
+
+    Attributes:
+        tic_id: The Taxability Information Code to use in rate requests.
+        label: The taxabilityCode label from the TIC data.
+        natural_label: A natural label refactored to align with the full description.
+        description: Full description of the taxabilityCode line item.
+        documentation: Long-form description of the TIC code.
+        rank: The itemized rank for the result (1 = best match).
+        score: Confidence score for the result (0.0-1.0), independent of rank.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    tic_id: int = Field(
+        ...,
+        alias="ticId",
+        description="The Taxability Information Code to use in rate requests",
+    )
+    label: str = Field(..., description="The taxabilityCode label from the TIC data")
+    natural_label: str = Field(
+        ...,
+        alias="naturalLabel",
+        description="A natural label refactored to align with the full description",
+    )
+    description: str = Field(
+        ..., description="Full description of the taxabilityCode line item"
+    )
+    documentation: str = Field(..., description="Long-form description of the TIC code")
+    rank: int = Field(
+        ..., description="The itemized rank for the result (1 = best match)"
+    )
+    score: float = Field(
+        ...,
+        description="Confidence score for the result (0.0-1.0), independent of rank",
+    )
+
+
+class ProductCodeSearchResponse(BaseModel):
+    """Response from the product code search endpoint.
+
+    Contains the original query and a list of matching product codes
+    ranked and scored by relevance.
+
+    Attributes:
+        query: The original query sent in the POST request.
+        results: Array of matching product codes ranked by relevance.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    query: str = Field(..., description="The original query sent in the POST request")
+    results: List["ProductCodeSearchResult"] = Field(
+        ...,
+        description="Array of matching product codes ranked and scored by relevance",
+    )
+
+
+class ProductCodeRecommendation(BaseModel):
+    """A single AI-powered product code recommendation.
+
+    Attributes:
+        status: Status of the prediction result (success or fail).
+        error: Non-null error message when the prediction fails.
+        tic_id: The recommended Taxability Information Code.
+        label: The taxabilityCode label from the TIC data.
+        natural_label: A natural label refactored to align with the description.
+        tic_description: Full description of the recommended TIC code.
+        product_description: The original product description sent in the query.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    status: str = Field(
+        ..., description="Status of the prediction result (success or fail)"
+    )
+    error: Optional[str] = Field(
+        None, description="Non-null error message when the prediction fails"
+    )
+    tic_id: int = Field(
+        ...,
+        alias="ticId",
+        description="The recommended Taxability Information Code",
+    )
+    label: str = Field(..., description="The taxabilityCode label from the TIC data")
+    natural_label: str = Field(
+        ...,
+        alias="naturalLabel",
+        description="A natural label refactored to align with the description",
+    )
+    tic_description: str = Field(
+        ..., description="Full description of the recommended TIC code"
+    )
+    product_description: str = Field(
+        ..., description="The original product description sent in the query"
+    )
+
+
+class ProductCodeRecommendationResponse(BaseModel):
+    """Response from the product code recommendation endpoint.
+
+    Contains AI-powered product code recommendations (typically one).
+
+    Attributes:
+        predictions: Array of AI-powered product code recommendations.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    predictions: List["ProductCodeRecommendation"] = Field(
+        ...,
+        description="Array of AI-powered product code recommendations",
+    )
+
+
+# =============================================================================
 # ZipTax Cart Tax Calculation Models
 # =============================================================================
 

@@ -9,7 +9,7 @@
 project:
   name: "ziptax-sdk"
   language: "python"
-  version: "0.2.4-beta"
+  version: "0.2.5-beta"
   description: "Official Python SDK for the ZipTax API with optional TaxCloud order management support"
 
   # Repository information
@@ -249,6 +249,101 @@ resources:
         returns:
           type: "V60AccountMetrics"
           is_array: false
+
+      # -----------------------------------------------------------------------
+      # Product Code (TIC) Search Endpoints
+      # -----------------------------------------------------------------------
+      # The ZipTax API provides two product code search capabilities:
+      #   1. SearchProductCodes - Returns all matching TIC codes ranked by score
+      #   2. RecommendProductCode - Returns a single AI-powered best-match TIC
+      #
+      # Both endpoints accept a natural language product description and return
+      # Taxability Information Codes (TICs) for use with rate requests and carts.
+      # -----------------------------------------------------------------------
+
+      - name: "SearchProductCodes"
+        api: "ziptax"
+        http_method: "POST"
+        path: "/search/tic"
+        description: |
+          Search for product codes (TICs) using a natural language product
+          description. Returns all matching Taxability Information Codes ranked
+          and scored by relevance. Use the returned ticId as the taxabilityCode
+          parameter in rate requests or cart line items.
+        operation_id: "searchProductCodes"
+        parameters: []
+        request_body:
+          type: "ProductCodeSearchRequest"
+          content_type: "application/json"
+          description: "Natural language product description to search for matching TIC codes"
+          properties:
+            - name: "query"
+              type: "string"
+              required: true
+              description: "Full text product description (e.g., 'baked goods sold in plastic packaging')"
+        returns:
+          type: "ProductCodeSearchResponse"
+          is_array: false
+          status_code: 200
+        authentication:
+          type: "header"
+          header: "X-API-Key"
+          format: "{apiKey}"
+          note: "Uses ZipTax API key"
+        errors:
+          400:
+            - "Invalid request format"
+            - "Missing query field"
+          401:
+            - "Missing X-API-KEY header"
+            - "Invalid or inactive API key"
+        api_error_codes:
+          113:
+            description: "Product rate rules not enabled for key"
+            note: "ZipTax API-specific response code (not an HTTP status code). Returned inside the response body metadata, not as the HTTP status."
+
+      - name: "RecommendProductCode"
+        api: "ziptax"
+        http_method: "POST"
+        path: "/search/tic/recommend"
+        description: |
+          Get an AI-powered product code (TIC) recommendation using a natural
+          language product description. Returns a single best-match TIC code
+          with higher accuracy than the standard search. Has slightly higher
+          latency than SearchProductCodes due to the AI processing step.
+          Use the returned ticId as the taxabilityCode parameter in rate
+          requests or cart line items.
+        operation_id: "recommendProductCode"
+        parameters: []
+        request_body:
+          type: "ProductCodeSearchRequest"
+          content_type: "application/json"
+          description: "Natural language product description for AI-powered TIC recommendation"
+          properties:
+            - name: "query"
+              type: "string"
+              required: true
+              description: "Full text product description (e.g., 'baked goods sold in plastic packaging')"
+        returns:
+          type: "ProductCodeRecommendationResponse"
+          is_array: false
+          status_code: 200
+        authentication:
+          type: "header"
+          header: "X-API-Key"
+          format: "{apiKey}"
+          note: "Uses ZipTax API key"
+        errors:
+          400:
+            - "Invalid request format"
+            - "Missing query field"
+          401:
+            - "Missing X-API-KEY header"
+            - "Invalid or inactive API key"
+        api_error_codes:
+          113:
+            description: "Product rate rules not enabled for key"
+            note: "ZipTax API-specific response code (not an HTTP status code). Returned inside the response body metadata, not as the HTTP status."
 
       # -----------------------------------------------------------------------
       # Cart Tax Calculation - Dual API Routing
@@ -892,6 +987,133 @@ models:
         type: "string"
         required: true
         description: "Account status or informational message"
+
+  # ---------------------------------------------------------------------------
+  # Product Code (TIC) Search Models
+  # ---------------------------------------------------------------------------
+
+  - name: "ProductCodeSearchRequest"
+    description: "Request payload for product code search and recommendation endpoints"
+    properties:
+      - name: "query"
+        type: "string"
+        required: true
+        description: "Natural language product description to search for matching TIC codes"
+        example: "baked goods sold in plastic packaging"
+
+  - name: "ProductCodeSearchResult"
+    description: "A single product code search result with TIC code, description, rank, and score"
+    properties:
+      - name: "tic_id"
+        type: "integer"
+        required: true
+        api_field: "ticId"
+        description: "The Taxability Information Code to use in rate requests"
+        example: 41030
+        note: "API returns as string; SDK parses to int for developer convenience"
+      - name: "label"
+        type: "string"
+        required: true
+        description: "The taxabilityCode label from the TIC data"
+        example: "Bakery Items"
+      - name: "natural_label"
+        type: "string"
+        required: true
+        api_field: "naturalLabel"
+        description: "A natural label refactored to align with the full description"
+        example: "Bakery Items"
+      - name: "description"
+        type: "string"
+        required: true
+        description: "Full description of the taxabilityCode line item"
+        example: "Bakery items sold without eating utensils provided by the seller..."
+      - name: "documentation"
+        type: "string"
+        required: true
+        description: "Long-form description of the TIC code"
+        example: "Bakery items sold without eating utensils provided by the seller..."
+      - name: "rank"
+        type: "integer"
+        required: true
+        description: "The itemized rank for the result item (1 = best match)"
+        example: 1
+        note: "API returns as string; SDK parses to int"
+      - name: "score"
+        type: "number"
+        format: "float"
+        required: true
+        description: "Confidence score for the result (0.0-1.0), independent of rank"
+        example: 0.891025641025641
+        note: "API returns as string; SDK parses to float"
+
+  - name: "ProductCodeSearchResponse"
+    description: "Response from the product code search endpoint with ranked results"
+    properties:
+      - name: "query"
+        type: "string"
+        required: true
+        description: "The original query sent in the POST request"
+        example: "baked bread in plastic packaging"
+      - name: "results"
+        type: "array"
+        items_type: "ProductCodeSearchResult"
+        required: true
+        description: "Array of matching product codes ranked and scored by relevance"
+
+  - name: "ProductCodeRecommendation"
+    description: "A single AI-powered product code recommendation"
+    properties:
+      - name: "status"
+        type: "string"
+        required: true
+        description: "Status of the prediction result (success or fail)"
+        example: "success"
+      - name: "error"
+        type: "string"
+        required: false
+        description: "Non-null error message when the prediction fails"
+        example: null
+      - name: "tic_id"
+        type: "integer"
+        required: true
+        api_field: "ticId"
+        description: "The recommended Taxability Information Code"
+        example: 41030
+        note: "API returns as string; SDK parses to int"
+      - name: "label"
+        type: "string"
+        required: true
+        description: "The taxabilityCode label from the TIC data"
+        example: "Bakery Items"
+      - name: "natural_label"
+        type: "string"
+        required: true
+        api_field: "naturalLabel"
+        description: "A natural label refactored to align with the full description"
+        example: "Bakery Items"
+      - name: "tic_description"
+        type: "string"
+        required: true
+        api_field: "tic_description"
+        description: "Full description of the recommended TIC code"
+        example: "Bakery items sold without eating utensils provided by the seller..."
+        note: "API uses snake_case (tic_description), not camelCase"
+      - name: "product_description"
+        type: "string"
+        required: true
+        api_field: "product_description"
+        description: "The original product description sent in the query"
+        example: "baked goods sold in plastic packaging"
+        note: "API uses snake_case (product_description), not camelCase"
+
+  - name: "ProductCodeRecommendationResponse"
+    description: "Response from the product code recommendation endpoint"
+    properties:
+      - name: "predictions"
+        type: "array"
+        items_type: "ProductCodeRecommendation"
+        required: true
+        description: "Array of AI-powered product code recommendations (typically one)"
 
   # ---------------------------------------------------------------------------
   # Postal Code Lookup Models
@@ -2875,6 +3097,15 @@ quality_requirements:
 # Version History
 # -----------------------------------------------------------------------------
 version_history:
+  - version: "0.2.5-beta"
+    date: "2026-03-20"
+    changes:
+      - "SearchProductCodes: search TIC codes by natural language product description"
+      - "RecommendProductCode: AI-powered single TIC code recommendation"
+      - "ProductCodeSearchRequest, ProductCodeSearchResult, ProductCodeSearchResponse models"
+      - "ProductCodeRecommendation, ProductCodeRecommendationResponse models"
+      - "POST /search/tic and POST /search/tic/recommend endpoint support"
+      - "Input validation for product description queries"
   - version: "0.2.4-beta"
     date: "2026-03-11"
     changes:
