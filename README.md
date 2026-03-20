@@ -1,6 +1,6 @@
 # Ziptax Python SDK
 
-Official Python SDK for the [Ziptax API](https://zip-tax.com) - Get accurate sales and use tax rates for any US or Canadian address, with optional TaxCloud order management support.
+Official Python SDK for the [Ziptax API](https://zip.tax) - Get accurate sales and use tax rates for any US or Canadian address, with optional TaxCloud order management support.
 
 [![Python Version](https://img.shields.io/pypi/pyversions/ziptax-sdk)](https://pypi.org/project/ziptax-sdk/)
 [![License](https://img.shields.io/github/license/ziptax/ziptax-python)](LICENSE)
