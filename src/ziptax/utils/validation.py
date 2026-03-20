@@ -185,6 +185,22 @@ def validate_postal_code(postal_code: str) -> None:
         )
 
 
+def validate_product_query(query: str) -> None:
+    """Validate product description query for TIC search endpoints.
+
+    Args:
+        query: Natural language product description to validate
+
+    Raises:
+        ZipTaxValidationError: If query is invalid
+    """
+    if not isinstance(query, str):
+        raise ZipTaxValidationError("Product query must be a string")
+
+    if not query or not query.strip():
+        raise ZipTaxValidationError("Product query cannot be empty")
+
+
 def parse_address_string(address: str) -> Dict[str, str]:
     """Parse a single address string into structured TaxCloud address components.
 

@@ -14,6 +14,8 @@ from ziptax.models import (
     CreateOrderFromCartRequest,
     CreateOrderRequest,
     OrderResponse,
+    ProductCodeRecommendationResponse,
+    ProductCodeSearchResponse,
     RefundTransactionRequest,
     RefundTransactionResponse,
     TaxCloudCalculateCartResponse,
@@ -339,6 +341,244 @@ class TestGetRatesByPostalCode:
         assert result.geo_state == "CA"
         assert result.tax_sales == 0.0775
         assert result.tax_use == 0.0775
+
+
+class TestSearchProductCodes:
+    """Test cases for SearchProductCodes function."""
+
+    def test_basic_request(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_search_response,
+    ):
+        """Test basic product code search request."""
+        mock_http_client.post.return_value = sample_product_code_search_response
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.SearchProductCodes("baked goods sold in plastic packaging")
+
+        assert isinstance(response, ProductCodeSearchResponse)
+        assert response.query == "baked goods sold in plastic packaging"
+        assert len(response.results) == 2
+        mock_http_client.post.assert_called_once()
+
+    def test_uses_correct_path(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_search_response,
+    ):
+        """Test that SearchProductCodes calls the correct API path."""
+        mock_http_client.post.return_value = sample_product_code_search_response
+        functions = Functions(mock_http_client, mock_config)
+
+        functions.SearchProductCodes("test query")
+
+        call_args = mock_http_client.post.call_args
+        assert call_args[0][0] == "/search/tic"
+
+    def test_request_body(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_search_response,
+    ):
+        """Test that request body contains the query."""
+        mock_http_client.post.return_value = sample_product_code_search_response
+        functions = Functions(mock_http_client, mock_config)
+
+        functions.SearchProductCodes("baked goods")
+
+        call_args = mock_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        assert json_body == {"query": "baked goods"}
+
+    def test_result_fields_parsed(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_search_response,
+    ):
+        """Test that result fields are properly parsed with correct types."""
+        mock_http_client.post.return_value = sample_product_code_search_response
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.SearchProductCodes("test")
+
+        result = response.results[0]
+        assert result.tic_id == 41030
+        assert isinstance(result.tic_id, int)
+        assert result.label == "Bakery Items"
+        assert result.natural_label == "Bakery Items"
+        assert "Bakery items" in result.description
+        assert "Bakery items" in result.documentation
+        assert result.rank == 1
+        assert isinstance(result.rank, int)
+        assert result.score == 0.891025641025641
+        assert isinstance(result.score, float)
+
+    def test_multiple_results_parsed(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_search_response,
+    ):
+        """Test that multiple results are properly parsed."""
+        mock_http_client.post.return_value = sample_product_code_search_response
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.SearchProductCodes("test")
+
+        assert len(response.results) == 2
+        assert response.results[0].tic_id == 41030
+        assert response.results[0].rank == 1
+        assert response.results[1].tic_id == 40030
+        assert response.results[1].rank == 2
+
+    def test_empty_query_validation(self, mock_http_client, mock_config):
+        """Test validation of empty query."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="cannot be empty"):
+            functions.SearchProductCodes("")
+
+    def test_whitespace_only_query_validation(self, mock_http_client, mock_config):
+        """Test validation of whitespace-only query."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="cannot be empty"):
+            functions.SearchProductCodes("   ")
+
+    def test_empty_results_list(self, mock_http_client, mock_config):
+        """Test handling of empty results from API."""
+        mock_http_client.post.return_value = {
+            "query": "nonexistent product xyz",
+            "results": [],
+        }
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.SearchProductCodes("nonexistent product xyz")
+
+        assert isinstance(response, ProductCodeSearchResponse)
+        assert response.query == "nonexistent product xyz"
+        assert len(response.results) == 0
+
+
+class TestRecommendProductCode:
+    """Test cases for RecommendProductCode function."""
+
+    def test_basic_request(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_recommendation_response,
+    ):
+        """Test basic product code recommendation request."""
+        mock_http_client.post.return_value = sample_product_code_recommendation_response
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.RecommendProductCode(
+            "baked goods sold in plastic packaging"
+        )
+
+        assert isinstance(response, ProductCodeRecommendationResponse)
+        assert len(response.predictions) == 1
+        mock_http_client.post.assert_called_once()
+
+    def test_uses_correct_path(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_recommendation_response,
+    ):
+        """Test that RecommendProductCode calls the correct API path."""
+        mock_http_client.post.return_value = sample_product_code_recommendation_response
+        functions = Functions(mock_http_client, mock_config)
+
+        functions.RecommendProductCode("test query")
+
+        call_args = mock_http_client.post.call_args
+        assert call_args[0][0] == "/search/tic/recommend"
+
+    def test_request_body(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_recommendation_response,
+    ):
+        """Test that request body contains the query."""
+        mock_http_client.post.return_value = sample_product_code_recommendation_response
+        functions = Functions(mock_http_client, mock_config)
+
+        functions.RecommendProductCode("baked goods")
+
+        call_args = mock_http_client.post.call_args
+        json_body = call_args[1]["json"]
+        assert json_body == {"query": "baked goods"}
+
+    def test_prediction_fields_parsed(
+        self,
+        mock_http_client,
+        mock_config,
+        sample_product_code_recommendation_response,
+    ):
+        """Test that prediction fields are properly parsed with correct types."""
+        mock_http_client.post.return_value = sample_product_code_recommendation_response
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.RecommendProductCode("test")
+
+        prediction = response.predictions[0]
+        assert prediction.status == "success"
+        assert prediction.error is None
+        assert prediction.tic_id == 41030
+        assert isinstance(prediction.tic_id, int)
+        assert prediction.label == "Bakery Items"
+        assert prediction.natural_label == "Bakery Items"
+        assert "Bakery items" in prediction.tic_description
+        assert prediction.product_description == (
+            "baked goods sold in plastic packaging"
+        )
+
+    def test_empty_query_validation(self, mock_http_client, mock_config):
+        """Test validation of empty query."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="cannot be empty"):
+            functions.RecommendProductCode("")
+
+    def test_whitespace_only_query_validation(self, mock_http_client, mock_config):
+        """Test validation of whitespace-only query."""
+        functions = Functions(mock_http_client, mock_config)
+
+        with pytest.raises(ZipTaxValidationError, match="cannot be empty"):
+            functions.RecommendProductCode("   ")
+
+    def test_prediction_with_error(self, mock_http_client, mock_config):
+        """Test handling of a prediction with error status."""
+        mock_http_client.post.return_value = {
+            "predictions": [
+                {
+                    "status": "fail",
+                    "error": "Unable to determine product code",
+                    "ticId": "0",
+                    "label": "",
+                    "naturalLabel": "",
+                    "tic_description": "",
+                    "product_description": "ambiguous product",
+                }
+            ]
+        }
+        functions = Functions(mock_http_client, mock_config)
+
+        response = functions.RecommendProductCode("ambiguous product")
+
+        assert isinstance(response, ProductCodeRecommendationResponse)
+        prediction = response.predictions[0]
+        assert prediction.status == "fail"
+        assert prediction.error == "Unable to determine product code"
+        assert prediction.tic_id == 0
 
 
 class TestCalculateCart:
